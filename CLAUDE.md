@@ -55,6 +55,9 @@ Development planning happens in a Claude cloud session in this repo.
 - Full build (CardinalNative v26.02): 100.5 MB wasm + 162.6 MB data
   decompressed (about 87 MB brotli). Both files exceed GitHub's 100 MB
   per-file limit, so the full build cannot live on GitHub Pages.
+- Stock Mini web build (v26.02) is hosted at minicardinal.kx.studio: 32.5 MB
+  wasm + 3.0 MB data decompressed, about 9 MB brotli. Fits GitHub Pages and
+  iOS memory easily. Its URL patch loading is compiled out (docs/02 §6).
 - cardinal.kx.studio sends no CORS headers; we must host our own copy.
 - iOS Safari has no Web MIDI API. MIDI hardware is Android/desktop only.
 - Combined binary is GPLv3+. Private use is fine; sharing the URL means

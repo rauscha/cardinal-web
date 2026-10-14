@@ -121,10 +121,22 @@ EG×VCA), Audible Instruments Plaits, Valley Dexter and Interzone, Mockba
 oscillators and mixers, Aria Spleet/Swerge, and Cardinal's Host Audio,
 Host CV, Host MIDI family, Host Time, Text Editor. Polyphony throughout.
 
-**[SOLID]** The Mini web build is not hosted anywhere public (404 on
-kx.studio), so its size is unknown. **[PLAUSIBLE]** It should be a fraction
-of the full build because the data file is mostly SVG panels for 90-odd
-plugin collections.
+**[SOLID, measured 2026-10-14]** The Mini web build (v26.02, same date as
+the full build) is hosted at https://minicardinal.kx.studio/, which I missed
+on the first pass. Its footprint:
+
+| File | On the wire (brotli) | Decompressed |
+|---|---|---|
+| CardinalMini-v26.02.wasm | 3.9 MB | 32.5 MB |
+| CardinalMini-v26.02.data | 1.4 MB | 3.0 MB |
+| CardinalMini-v26.02.js | 3.9 MB | 3.9 MB |
+| Total | about 9 MB | about 40 MB |
+
+That is roughly one tenth of the full build in memory and one ninth on the
+wire. It fits GitHub Pages with room to spare and sits far below the iOS
+WebAssembly memory ceiling, so hard stops 2 and 3 above do not apply to the
+Mini variant. The module additions in document 03 and the extras in document
+04 will grow it; each is measured on our first build.
 
 **[SOLID]** For a learner, Mini is the better teaching set anyway: one of
 each core module type, from several authors, instead of 1,000-plus modules.
@@ -213,8 +225,9 @@ stylus, and on laptops, it should be solid.
 
 ## 8. Open questions I can answer with work, in order
 
-1. Build CardinalMini for WASM and measure the three files. Decides the
-   GitHub Pages and iOS questions. Untested whether this session's
+1. Build CardinalMini for WASM with our module additions and measure it.
+   The stock Mini is already measured (about 40 MB decompressed), so this
+   is now about the delta, not the gate. Untested whether this session's
    container can complete the build.
 2. Load the stock full build locally in headless Chromium and confirm
    `Module.WebAudioBridge` is reachable and a recorder node can be

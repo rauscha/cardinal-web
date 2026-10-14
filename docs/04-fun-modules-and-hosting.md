@@ -141,9 +141,11 @@ Three separate questions: GitHub's rules, GPL, and bytes.
   bandwidth; soft 10 builds per hour; 10-minute deployment timeout.
   Separately, git refuses any file over 100 MiB.
   https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits
-- Our build's sizes are unmeasured. The full build (100 MB wasm, 163 MB
-  data) fails the per-file limit; Mini plus the additions above is my
-  estimate of tens of megabytes per file, under the limit. [PLAUSIBLE]
+- [SOLID, measured] The stock Mini web build at minicardinal.kx.studio is
+  32.5 MB wasm and 3.0 MB data decompressed, about 9 MB brotli on the wire.
+  Under every GitHub limit by a wide margin. The additions in documents 03
+  and 04 add to that; the full build (100 MB wasm, 163 MB data) is the
+  ceiling we must stay well below.
 - Build in CI, not on a laptop: Cardinal's own `build.yml` already contains
   a working wasm job (ubuntu-22.04, PawPaw bootstrap, brotli compression).
   Copy it, then deploy with the `actions/deploy-pages` flow instead of
@@ -151,8 +153,9 @@ Three separate questions: GitHub's rules, GPL, and bytes.
   100 MiB git limit (the artifact path has only the 1 GB site limit) and
   removes the 10-builds-per-hour cap. [SOLID on the workflow's existence;
   PLAUSIBLE on the artifact-path limits]
-- Bandwidth: at roughly 40 MB per first visit [PLAUSIBLE] the 100 GB soft
-  limit allows about 2,500 cold loads a month. For one person plus friends,
+- Bandwidth: at roughly 10 to 15 MB per first visit over the wire
+  [PLAUSIBLE, from the measured Mini plus additions] the 100 GB soft limit
+  allows several thousand cold loads a month. For one person plus friends,
   irrelevant. Installed PWAs re-download only on version change.
 
 ### B4. Verdict
@@ -165,4 +168,5 @@ Yes, with two conditions you decide, not me:
 2. **Accept that the URL is public.** Unlisted, not private. No access
    control is available on a personal account.
 
-Space is not a blocker for Mini, pending the first measured build.
+Space is not a blocker: the stock Mini is measured at about 9 MB over the
+wire, and the additions are small by comparison.
