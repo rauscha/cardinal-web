@@ -59,3 +59,14 @@ Development planning happens in a Claude cloud session in this repo.
   offering source.
 - `Module.WebAudioBridge.audioContext` is reachable from page scripts, so
   WAV recording can be done in the shell without touching Cardinal.
+
+## Hosting facts (2026-10-14, see docs/04)
+- GitHub Free publishes Pages from public repos only; Pro allows private
+  repos; the site is public to anyone with the URL on any personal plan.
+- Serving the wasm publicly is GPL distribution: publish the Cardinal fork
+  and the shell (GPLv3+) and link Source and Licences from the app.
+- GitHub Pages gzips `.wasm` on the fly with `application/wasm` (measured on
+  parallax). Site limit 1 GB; git refuses files over 100 MiB; build in CI
+  and deploy with actions/deploy-pages rather than committing binaries.
+- Candidate extra modules and their licences: docs/04 part A. Avoid in the
+  web build: Stoermelder STRIP, Lilac Looper, Bogaudio Analyzer.
