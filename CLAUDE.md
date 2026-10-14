@@ -37,7 +37,9 @@ MediaRecorder export (lossy) or its Tone.js transport. Clone read-only with
 Development planning happens in a Claude cloud session in this repo.
 
 ## Constraints already known
-- Repo is private.
+- **Public distribution decided 2026-10-14.** Andrew is on GitHub Free, so
+  the repo goes public and the app is GPLv3+ with Source and Licences linked
+  from the app. The repo is private only until the first publishable build.
 - If it is served from `andrewrausch.com/<repo>/` (GitHub Pages), it shares one
   origin with Andrew's other PWAs. The manifest must set an explicit `"id": "./"`
   and relative `start_url` / `scope` (`"./"`), never a literal `"/"`. Never
