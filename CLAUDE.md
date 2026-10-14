@@ -7,10 +7,28 @@ designed for touch and small screens, with module documentation one tap
 away (Andrew is teaching himself modular), usable with or without MIDI
 hardware, and able to export WAV and MIDI.
 
-Architecture is not yet decided. The feasibility study and recommendation
-are in `docs/01-feasibility-and-architecture.md` (read it before proposing
-architecture). Development planning happens in a Claude cloud session in
-this repo.
+**Architecture decided 2026-10-14 (Andrew accepted):** Option A on the
+Cardinal **Mini** variant. The stock Cardinal WASM runs unchanged on a canvas;
+everything new (PWA shell, onboarding, lessons, help drawer, MIDI handling,
+WAV and MIDI export, patch library) is HTML/JS around it. Phones are a
+learning and sketching surface, not a performance instrument. Read
+`docs/01-feasibility-and-architecture.md` (why) and
+`docs/02-research-audio-midi-education.md` (audio/MIDI rules, export design,
+learning content, module-manual coverage) before proposing anything.
+
+The learning layer has two halves, both first-class: **explanation** (what a
+module and each knob does, Parallax-style) and **build tutorials** (how to
+make specific sounds, arps and rhythm without a sequencer module, expression
+via MIDI CC/MPE, and song or sound design ideas).
+
+Reference repo: `rauscha/parallax` (Andrew's Braids/Plaits/FM PWA, same
+origin, same stack constraints). Reuse its PWA manifest and Workbox config,
+CSP meta plugin, tap-to-start overlay, Web MIDI device recall, share-URL
+pattern, contrast tests and product principles. Do not reuse its
+MediaRecorder export (lossy) or its Tone.js transport. Clone read-only with
+`git clone --depth 1 https://github.com/rauscha/parallax` when needed.
+
+Development planning happens in a Claude cloud session in this repo.
 
 ## Constraints already known
 - Repo is private.
