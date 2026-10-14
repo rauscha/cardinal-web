@@ -512,9 +512,9 @@ twelve tutorials below. [SOLID that the gap exists]
 
 The recurring gaps (slew limiter, 8:1 switch, clock divider, gate
 sequencer) are all small utility modules that exist in the full Cardinal
-build. Whether to add a handful of them to our Mini module list is the one
-scope question this research raises. It would cost a `plugins/Makefile`
-edit and a rebuild, not a UI change.
+build. **Decided 2026-10-14: add them.** The picks and the build-list
+recipe are in `03-mini-module-additions.md`; the "Gap" notes above describe
+the stock Mini and no longer apply to our build.
 
 ## 7. Verifications I can run next, in order
 
@@ -527,8 +527,7 @@ edit and a rebuild, not a UI change.
    the self-rewriting explain text). Likely through Host Parameters.
 4. Confirm at runtime that Host MIDI in the Mini web build receives Web
    MIDI on Android Chrome, and find the MPE menu path.
-5. Decide whether to add slew limiter, 8:1 switch, clock divider and a gate
-   sequencer to the Mini module list before the first build.
+5. Apply the Mini module additions from document 03 before the first build.
 6. Build Cardinal Mini for WASM and measure it (still the gating item from
    document 01), with the one-line change that enables `?patch=` deep links
    in Mini.

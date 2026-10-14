@@ -16,6 +16,12 @@ learning and sketching surface, not a performance instrument. Read
 `docs/02-research-audio-midi-education.md` (audio/MIDI rules, export design,
 learning content, module-manual coverage) before proposing anything.
 
+**Mini module list is ours, not upstream's (decided 2026-10-14):** add
+slew limiter (Bogaudio SLEW), 8:1 switch (Bogaudio SWITCH81, Fundamental
+Sequential Switch), clock and divider (Impromptu Clocked and Clkd, Bogaudio
+RGATE) and gate/CV sequencers (Impromptu GateSeq64, Fundamental SEQ 3,
+Bogaudio ADDR-SEQ). Recipe in `docs/03-mini-module-additions.md`.
+
 The learning layer has two halves, both first-class: **explanation** (what a
 module and each knob does, Parallax-style) and **build tutorials** (how to
 make specific sounds, arps and rhythm without a sequencer module, expression
