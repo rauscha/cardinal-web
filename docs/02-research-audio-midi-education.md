@@ -383,7 +383,138 @@ layers. [PLAUSIBLE on the Dexter numbers]
 
 ## 6. Build tutorials: sounds, arps, expression, song design
 
-(Pending: the fourth research agent's report is being folded in below.)
+The fourth research pass looked for recipe-style material the app can link
+to or adapt. Three structural facts first, verified in the Cardinal source:
+
+- [SOLID] The Mini web build does receive Web MIDI. Its plugin header sets
+  MIDI input, MIDI output and MPE on, and the same web bridge serves it
+  (`src/CardinalMini/DistrhoPluginInfo.h`). Host MIDI, Host MIDI CC and
+  Host MIDI Gate therefore work from a phone's USB controller on Android.
+  Runtime check still owed.
+- [SOLID] Loading a patch from the URL is switched off in the Mini variant.
+  All three mechanisms (`?patch=` inline, `?patchurl=`, `?patchstorage=`)
+  are behind `! CARDINAL_VARIANT_MINI` in `src/CardinalUI.cpp`, and the two
+  remote ones call same-origin PHP proxies that exist only on kx.studio.
+  Lesson deep links need a one-line fork change (drop the gate on the
+  inline `?patch=` path) or a shell-side loader through `Module.FS`. This is
+  the first justified C++ change in the project.
+- [SOLID] Mini has no sequencer, arpeggiator, clock divider, slew limiter,
+  logic or drum module. Rhythm and melody come from LFO, Random, Sample &
+  Hold, Quantizer, Switch, looping AD envelopes, or external MIDI. Every
+  recipe below is checked against that.
+
+### 6.1 Classic sounds
+
+| Sound | Best source | Our modules | Gap |
+|---|---|---|---|
+| Sine kick and sub | VCV thread "Kick drums and basslines from sine oscillators" community.vcvrack.com/t/.../10548 (settings given); SOS "Synthesizing Drums: The Bass Drum" | Fundamental VCO sine with FM input, two ADSR, VCA; LFO square as clock | none [SOLID] |
+| Snare, clap, hat | SOS "Synthesizing Drums: The Snare Drum"; Noise Engineering "Quick patch: claps" | Noise to VCF (BPF/HPF) to ADSR to VCA; sine body via VCA Mix; Surge Waveshaper for saturation | none [SOLID/PLAUSIBLE] |
+| Metallic hats (808 method) | SOS "Analysing Metallic Percussion", "Practical Cymbal Synthesis" | six detuned squares: Surge Classic VCO unison or Bogaudio Unison into a poly VCO, then HPF | none [PLAUSIBLE] |
+| Acid bass | VCV Rack Ideas acid-techno video (2018, patch on Patreon) | Interzone as the voice (built-in glide, resonant filter); or VCO to VCF with Bogaudio AD on cutoff | no slew limiter for the VCO version; sequencer from 6.2 or MIDI [PLAUSIBLE] |
+| PWM pad and strings | SOS "Synthesizing Strings: PWM and String Sounds", "String Machines" | VCO pulse width from a slow Bogaudio LFO, slow ADSR, Surge Delay as chorus or Nimbus | none [PLAUSIBLE] |
+| Supersaw | VCV thread "Bogaudio Unison to make monster sounds" community.vcvrack.com/t/.../16772 (patch attached) | Bogaudio Unison after Quantizer into poly Fundamental VCO; or Surge VCO unison | none [SOLID] |
+| FM bell | SOS "Synthesizing Bells" | Dexter or Surge FM2 at ratios near 1.67:1 or 2.33:1, fast attack, long decay | none [SOLID] |
+| Pluck | SOS "Synthesizing Plucked Strings" | saw to VCF with fast-decay envelope; Plaits or Surge String VCO as shortcuts | none [SOLID] |
+| Karplus-Strong | Learning Modular glossary; VCV thread community.vcvrack.com/t/.../10150 | Noise to short AD and VCA to Surge Tuned Delay with feedback and a VCF in the loop | none [PLAUSIBLE] |
+| Lead with vibrato | Omri Cohen paid course lesson list | LFO to VCO FM through a VCA for depth | none [PLAUSIBLE] |
+
+### 6.2 Arps and rhythm without a sequencer
+
+| Technique | Source | Our modules | Gap |
+|---|---|---|---|
+| Random melody | Chillout With Beats "Create a sequence with sample and hold" chilloutwithbeats.com/vcv-rack-s-and-h/; VCV "Patches for beginners" `random_melodies.vcv` | Bogaudio S&H normals to internal noise when its input is empty [SOLID from README]; clock from Bogaudio LFO square; Quantizer | none [SOLID] |
+| Classic S&H arp | cmtext.com chapter 4; Muzines "Advanced Music Synthesis" | sample a triangle for up-down, a saw for one direction; Bogaudio LFO gives both at once | none [PLAUSIBLE] |
+| Switch as step sequencer | Bogaudio README (Switch 1:8 has clock, reset, steps, direction) | eight Bogaudio Offset constants into a 1:8 switch, mixed back through two VCA Mix | clumsy: an 8:1 switch or ADDR-SEQ would be natural; neither is in Mini [SOLID] |
+| No-sequencer challenge | VCP Challenge 73 community.vcvrack.com/t/.../18209 (three patches, two videos) | LFO plus mixer plus S&H plus Quantizer | the shift-register tricks need modules we lack [SOLID] |
+| Phone or laptop as arpeggiator | iOS AUv3 arps exist (ArpBud 2, Kebarp); no free browser arp found | Host MIDI receives it over Web MIDI on Android | iOS cannot send MIDI to a Safari PWA; see section 2 [PLAUSIBLE] |
+
+### 6.3 Expression
+
+| Topic | Source | Our modules | Gap |
+|---|---|---|---|
+| Velocity and aftertouch | AJH Synth video "Velocity and Aftertouch: how to control VCA, LFO, VCF" (chaptered) | Host MIDI VEL and AFT outputs to VCA CV, VCF cutoff, and an LFO-depth VCA; Bogaudio Offset for scaling | none [SOLID] |
+| Mod wheel and CC | VCV Core manual (CC 0 to 10 V, no 14-bit) | Host MIDI CC exposes channel pressure and pitch bend too [SOLID, Cardinal docs] | none |
+| MPE | VCV forum thread 10580 (MIDI-CV poly 16, mode MPE) | Mini sets MPE on in its plugin header [SOLID] | the menu path in Cardinal is unverified |
+| Performance macros | Craig Anderton "Use Matrix Modulation for More Synth Expressiveness" | Surge Mod Matrix | no tutorial exists for Surge's matrix in Rack; we write it [PLAUSIBLE] |
+
+### 6.4 Generative and self-playing
+
+- **Krell patch**: feasible with Bogaudio AD in loop mode with its end-of-cycle
+  output, Random's smooth output, S&H and Quantizer. Sources: Omri Cohen
+  "Let's build a Krell Patch" (patch attached, community thread 2614); Todd
+  Barton's original; Eric Schlappi's "Introduction to Generative Patching"
+  lecture. [SOLID]
+- **Cross-modulating LFOs**: two slow Bogaudio LFOs into a third's FM input.
+  [PLAUSIBLE]
+- **Probability gating**: Random's trigger output into Switch. [PLAUSIBLE]
+- Not feasible with Mini: Turing machine, Benjolin, Marbles-style patterns.
+  No shift register or logic.
+
+### 6.5 Song structure and sound-design process
+
+Nothing free and specific to arranging with a modular was found. Closest:
+Omri Cohen "Building a Techno patch from scratch" (chaptered: kick, hats,
+bass, performance controls; uses paid VCV Drums), Attack Magazine "4 ways to
+break out of the loop" (DAW-oriented, principles transfer), the
+modulations.substack VCV ambient-track walk-through, and cyball's riser
+video. The app will have to author this layer itself, built on the
+twelve tutorials below. [SOLID that the gap exists]
+
+### 6.6 Patch sharing and what may be bundled
+
+- [SOLID] Patchstorage has a Cardinal platform (id 7834, about 213 patches)
+  and a public beta API with CORS enabled for both metadata and `.vcv`
+  downloads, so a static GitHub Pages app can fetch patches client-side.
+  https://patchstorage.com/platform/cardinal/
+- [SOLID] Patchstorage licences are chosen per upload (CC BY 4.0, AFL 3.0,
+  WTFPL seen). Nothing can be bundled without a per-patch check.
+- [SOLID] Cardinal's own `patches/` directory (examples, mini, templates,
+  `welcome-wasm-mini.vcv`) is stated to be public domain or CC0. Directly
+  bundleable. https://github.com/DISTRHO/Cardinal/tree/main/patches
+- [SOLID] No existing lesson pack uses only the Mini module set. Patch and
+  Tweak's 50 patches, Spektralisk's templates, SATURATA's ambient set and
+  the Patchstorage "Drone Synth for Beginners" (WTFPL, uses Plaits) all
+  pull in modules we do not ship. Omri Cohen's free "5 Patchlets with
+  Fundamental" video is the closest match and needs checking.
+
+### 6.7 Twelve build tutorials for the app
+
+1. **Sine kick.** Fundamental VCO sine with FM input, two ADSR, VCA, LFO
+   square as clock. Links: VCV thread 10548; SOS bass drum.
+2. **Noise snare and hat.** Noise to VCF to ADSR to VCA, sine body through
+   VCA Mix. Links: SOS snare; Noise Engineering claps.
+3. **Sub and acid bass.** Interzone as the voice, or VCO to VCF with
+   Bogaudio AD on cutoff. Link: VCV Rack Ideas acid video. Gap: no slew
+   limiter for the VCO version; melody from tutorial 8 or MIDI.
+4. **PWM pad.** VCO pulse width from Bogaudio LFO, slow ADSR, Surge Delay or
+   Nimbus. Link: SOS PWM strings.
+5. **Supersaw.** Bogaudio Unison after Quantizer into poly VCO, or Surge
+   Classic unison. Link: VCV thread 16772.
+6. **FM bell and pluck.** Dexter or Surge FM2; pluck via VCF decay
+   envelope. Links: SOS bells; SOS plucked strings.
+7. **Karplus-Strong.** Noise to short AD and VCA to Surge Tuned Delay with
+   feedback and a VCF in the loop. Link: Learning Modular glossary.
+8. **Random melody and S&H arp.** Bogaudio LFO as clock and source, Bogaudio
+   S&H, Quantizer, VCO. Links: Chillout S&H; `random_melodies.vcv`.
+9. **Switch as sequencer.** Offset constants into Switch 1:8 clocked by LFO,
+   mixed back, Quantizer. Link: Bogaudio README. Gap: wants an 8:1 switch.
+10. **Krell self-player.** Three looping Bogaudio AD, Random smooth, S&H,
+    Quantizer, VCA. Links: Omri Cohen Krell thread; Todd Barton.
+11. **Expressive voice.** Host MIDI velocity to VCA and VCF, aftertouch to
+    LFO depth, mod wheel via Host MIDI CC to cutoff, Surge Mod Matrix as a
+    macro. Links: AJH video; VCV Core manual; Anderton. Gap: MPE menu path
+    unverified in Cardinal.
+12. **From loop to track.** Layer tutorials 1, 2, 3 and 8; mutes and
+    transitions through Switch and VCA; riser from Noise and a VCF sweep;
+    performance macros. Links: Omri Cohen techno-from-scratch chapters;
+    Attack "break out of the loop"; cyball riser. Gap: no clock divider or
+    gate sequencer, so rhythms come from LFO divisions or external MIDI.
+
+The recurring gaps (slew limiter, 8:1 switch, clock divider, gate
+sequencer) are all small utility modules that exist in the full Cardinal
+build. Whether to add a handful of them to our Mini module list is the one
+scope question this research raises. It would cost a `plugins/Makefile`
+edit and a rebuild, not a UI change.
 
 ## 7. Verifications I can run next, in order
 
@@ -394,6 +525,11 @@ layers. [PLAUSIBLE on the Dexter numbers]
    write a WAV. Decides the WAV export design.
 3. Check whether knob values are readable from the shell at runtime (for
    the self-rewriting explain text). Likely through Host Parameters.
-4. Build Cardinal Mini for WASM and measure it (still the gating item from
-   document 01).
-5. Real-device tests on your Android phone. I cannot do these from here.
+4. Confirm at runtime that Host MIDI in the Mini web build receives Web
+   MIDI on Android Chrome, and find the MPE menu path.
+5. Decide whether to add slew limiter, 8:1 switch, clock divider and a gate
+   sequencer to the Mini module list before the first build.
+6. Build Cardinal Mini for WASM and measure it (still the gating item from
+   document 01), with the one-line change that enables `?patch=` deep links
+   in Mini.
+7. Real-device tests on your Android phone. I cannot do these from here.
