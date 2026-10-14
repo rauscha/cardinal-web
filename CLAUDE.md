@@ -16,6 +16,12 @@ learning and sketching surface, not a performance instrument. Read
 `docs/02-research-audio-midi-education.md` (audio/MIDI rules, export design,
 learning content, module-manual coverage) before proposing anything.
 
+**Under evaluation, not decided:** replacing the C++ canvas with our own
+HTML/SVG rack view over Cardinal's headless engine (option B+,
+`docs/06-engine-ui-split-option.md`). Licence permits it; the cost is
+months. One spike decides it. Everything in the option A shell carries over
+either way, so the shell is built first.
+
 **Mini module list is ours, not upstream's (decided 2026-10-14):** add
 slew limiter (Bogaudio SLEW), 8:1 switch (Bogaudio SWITCH81, Fundamental
 Sequential Switch), clock and divider (Impromptu Clocked and Clkd, Bogaudio
