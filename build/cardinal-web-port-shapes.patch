@@ -1,0 +1,61 @@
+diff --git a/src/override/ModuleWidget.cpp b/src/override/ModuleWidget.cpp
+index 36423e3..350cbbe 100644
+--- a/src/override/ModuleWidget.cpp
++++ b/src/override/ModuleWidget.cpp
+@@ -35,6 +35,7 @@
+ #include <engine/Engine.hpp>
+ #include <plugin/Plugin.hpp>
+ #include <app/SvgPanel.hpp>
++#include <app/SvgPort.hpp>
+ #include <ui/MenuSeparator.hpp>
+ #include <system.hpp>
+ #include <asset.hpp>
+@@ -133,6 +134,32 @@ void ModuleWidget::addParam(ParamWidget* param) {
+ 	addChild(param);
+ }
+ 
++// cardinal-web: shape-code jacks by signal type (docs/11 §5). Original SVGs
++// live in res/ComponentLibrary; sizes are kept so layouts do not move.
++static void cardinalWebShapePort(PortWidget* const port)
++{
++	SvgPort* const sp = dynamic_cast<SvgPort*>(port);
++	if (sp == nullptr || port->module == nullptr)
++		return;
++	engine::PortInfo* const info = port->getPortInfo();
++	if (info == nullptr || info->name.empty())
++		return;
++	const std::string n = string::uppercase(info->name);
++	const char* file = nullptr;
++	if (n.find("CLOCK") != std::string::npos || n.find("CLK") != std::string::npos)
++		file = "res/ComponentLibrary/PortClock.svg";
++	else if (n.find("GATE") != std::string::npos || n.find("TRIG") != std::string::npos || n.find("RUN") != std::string::npos
++	      || n.find("RESET") != std::string::npos || n.find("RST") != std::string::npos || n.find("SYNC") != std::string::npos)
++		file = "res/ComponentLibrary/PortGate.svg";
++	else if (n.find("V/OCT") != std::string::npos || n.find("PITCH") != std::string::npos || n.find("1V/O") != std::string::npos)
++		file = "res/ComponentLibrary/PortPitch.svg";
++	if (file == nullptr)
++		return;
++	const math::Vec center = port->box.getCenter();
++	sp->setSvg(window::Svg::load(asset::system(file)));
++	port->box.pos = center.minus(port->box.size.div(2));
++}
++
+ void ModuleWidget::addInput(PortWidget* input) {
+ 	// Check that the port is an input
+ 	assert(input->type == engine::Port::INPUT);
+@@ -141,6 +168,7 @@ void ModuleWidget::addInput(PortWidget* input) {
+ 	assert(!input2);
+ 	// Add port
+ 	addChild(input);
++	cardinalWebShapePort(input);
+ }
+ 
+ void ModuleWidget::addOutput(PortWidget* output) {
+@@ -151,6 +179,7 @@ void ModuleWidget::addOutput(PortWidget* output) {
+ 	assert(!output2);
+ 	// Add port
+ 	addChild(output);
++	cardinalWebShapePort(output);
+ }
+ 
+ template <class T, typename F>

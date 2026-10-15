@@ -179,3 +179,35 @@ Two tracks, no decision on the big one yet:
 What this does not change: the engine, patch format, module list, the
 export plans or the learning content. Patches made in any of these looks
 load in desktop Cardinal unchanged, because the look is not in the patch.
+
+## 8. Done on 2026-10-15 (Andrew said yes to both)
+
+**Track 1, flat components on option A: shipped in test build 0.3.**
+`build/reskin/generate.py` writes 57 original SVGs (CC0) at the exact sizes
+of the graphics they replace: Rack's Round*BlackKnob, Trimpot, Rogan 1/2/3/6
+families (static disc, rotating pointer, colour as a thin static ring),
+PJ301M ports; Fundamental's knob, small knob, port and buttons. The build
+script copies them over the fork's resources. Screenshot:
+`docs/spikes/2026-10-15-reskin-build-0.3.png`. Data package shrank from
+3.73 MB to 3.53 MB because the flat SVGs are tiny.
+
+**Shape-coded jacks: shipped in the same build**, as a hook in Cardinal's
+`ModuleWidget` override (`build/cardinal-web-port-shapes.patch`). It swaps a
+port's SVG by its name: CLOCK or CLK gives a diamond, GATE, TRIG, RUN,
+RESET, RST or SYNC a rounded square, V/OCT or PITCH a double ring, anything
+else the plain round jack. Jack centres are preserved. It applies to every
+plugin's ports, including Impromptu's and Audible's, because it replaces
+the graphic at runtime rather than editing their art. Known weakness: it is
+a name heuristic; the per-module table from section 5 would be exact.
+Untouched this round: the cable plugs (still round), Rack's lights (nanovg,
+not SVG), panel art, Bogaudio's and Impromptu's own knob sets, Cardinal's
+Host Audio big knob.
+
+**Track 2, the mock: live at https://andrewrausch.com/cardinal-web/mock/.**
+`shell/mock/index.html`, one file, no engine. Two skins over the startup
+patch: cards (ladder, bars for controls, IN and OUT jack lists) and live
+glyphs (step grid with playhead, scrolling saw, envelope with playhead,
+level bar, meters, all simulated at 120 bpm). Cables are drawn in the left
+margin as a transit map with the signal-type shapes. Landscape lays the
+cards side by side. Screenshots `docs/spikes/2026-10-15-mock-*.png`.
+Nothing in it is wired to Cardinal; it exists to be judged on a phone.

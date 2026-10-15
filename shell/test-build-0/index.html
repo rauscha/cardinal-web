@@ -6,7 +6,7 @@
     <meta name="description" content="Cardinal Mini" />
     <meta name="theme-color" content="#111111">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=0" user-scalable="no">
-    <title>Cardinal Web (test build 0.2)</title>
+    <title>Cardinal Web (test build 0.3)</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111111">
@@ -127,13 +127,13 @@
     </div>
     <div id="start" role="dialog" aria-modal="true">
       <button id="start-btn">Tap to start audio</button>
-      <p>Test build 0.2: new touch input. Browsers only make sound after a tap. The patch
+      <p>Test build 0.3: flat knobs and shape-coded jacks (square = gate or trigger, diamond = clock, double ring = pitch), plus the 0.2 touch input. Browsers only make sound after a tap. The patch
          that loads plays by itself: RUN on SEQ 3 (far left) starts and stops it, the row 1
          knobs are the notes.
          <strong>Hold</strong> half a second for a module's menu, then slide to a row and lift.
          <strong>Two fingers</strong> pan; <strong>pinch</strong> zooms. One finger on empty
          rack still draws a selection box. Landscape works best. Source and licences:
-         <a href="https://github.com/rauscha/cardinal-web" target="_blank" rel="noopener">github.com/rauscha/cardinal-web</a> (GPLv3+).</p>
+         <a href="https://github.com/rauscha/cardinal-web" target="_blank" rel="noopener">github.com/rauscha/cardinal-web</a> (GPLv3+). Design mock (no sound): <a href="mock/">mock/</a>.</p>
     </div>
     <div id="status-strip"></div>
     <div id="canvas_wrapper">
@@ -152,7 +152,7 @@
         if (!ctx || !el) return;
         var lat = (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
         el.textContent = 'audio ' + ctx.state + ' | ' + ctx.sampleRate + ' Hz | latency ~' + Math.round(lat * 1000) + ' ms | '
-          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0.2';
+          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0.3';
         el.style.display = 'block';
       }
       function cardinalWebAudioGate() {

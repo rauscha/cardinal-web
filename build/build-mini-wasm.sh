@@ -46,6 +46,22 @@ if [ -f "$TOUCH_PATCH" ]; then
   git -C dpf apply --check "$TOUCH_PATCH" && git -C dpf apply "$TOUCH_PATCH" || echo "touch patch already applied or does not apply cleanly; inspect manually"
 fi
 
+# Port-shape hook in Cardinal's ModuleWidget override (docs/11 §5).
+SHAPES_PATCH="${SHAPES_PATCH:-$(dirname "$0")/cardinal-web-port-shapes.patch}"
+if [ -f "$SHAPES_PATCH" ]; then
+  git apply --check "$SHAPES_PATCH" && git apply "$SHAPES_PATCH" || echo "port-shapes patch already applied or does not apply cleanly; inspect manually"
+fi
+
+# Flat component graphics (original, CC0) over Rack's component library and
+# Fundamental's components; regenerate with build/reskin/generate.py.
+RESKIN="$(dirname "$0")/reskin/out"
+if [ -d "$RESKIN" ]; then
+  cp "$RESKIN"/Rack/*.svg src/Rack/res/ComponentLibrary/
+  cp "$RESKIN"/Fundamental/*.svg plugins/Fundamental/res/components/
+  # resources are copied by directory mtime; force a repack
+  rm -rf bin/CardinalMini.lv2/resources/ComponentLibrary bin/CardinalMini.lv2/resources/Fundamental bin/CardinalMini.data
+fi
+
 make features
 make HAVE_LIBLO=false NOOPT=true NOSIMD=false -j"$(nproc)" mini
 

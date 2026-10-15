@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- cardinal-web flat component, original work, CC0-1.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="23.7px" height="23.7px" viewBox="0 0 23.7 23.7">
+  <polygon points="11.850,1.000 22.700,11.850 11.850,22.700 1.000,11.850" fill="#1a1a1a" stroke="#a6a6a6" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="11.850" cy="11.850" r="6.636" fill="none" stroke="#3a3a3a" stroke-width="1"/>
+  <circle cx="11.850" cy="11.850" r="4.740" fill="#060606"/>
+</svg>

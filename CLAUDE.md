@@ -102,6 +102,10 @@ Development planning happens in a Claude cloud session in this repo.
   the pugl web touch emulation: 450 ms long-press with 10 px slop, right
   press+release so menus get hover, slide-and-lift selects, two-finger pan,
   pinch zoom. Verified headlessly, docs/10. Tunables are `#define`s.
+- `build/reskin/generate.py` produces the flat component SVGs (original,
+  CC0) that the build script copies over Rack's component library and
+  Fundamental's components; `build/cardinal-web-port-shapes.patch` adds the
+  jack-shape hook in `src/override/ModuleWidget.cpp`. Both are in build 0.3.
 - `make mini` also produces `CardinalMini_dsp.wasm`, a headless engine with
   no UI, which is the starting point for the option B+ spike.
 - In this cloud session GitHub archive downloads are blocked (git clones are
@@ -116,8 +120,11 @@ Development planning happens in a Claude cloud session in this repo.
   GitHub Actions, confirmed by Andrew 2026-10-15). Test build 0.1 loads a
   self-playing arpeggio patch (`shell/test-build-0/startup.vcv`, also the
   fork's `patches/welcome-wasm-mini.vcv`). Only the SIMD build is shipped.
-  Test build 0.2 (2026-10-15) adds the touch backend (docs/10); awaiting
-  Andrew's phone verdict.
+  Test build 0.2 (2026-10-15) adds the touch backend (docs/10). Test
+  build 0.3 (2026-10-15) adds flat component graphics (`build/reskin/`),
+  shape-coded jacks (`build/cardinal-web-port-shapes.patch`) and the design
+  mock at `/mock/` (`shell/mock/index.html`, docs/11 §8). Awaiting Andrew's
+  phone verdict on all three.
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,
