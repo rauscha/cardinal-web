@@ -15,6 +15,7 @@
   .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .btn { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-weight:600; padding:9px 12px; border-radius:9px; }
   .btn.primary { background:var(--accent); color:#111; border-color:var(--accent); }
+  .btn:disabled { opacity:.4; }
   #stats { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:6px; line-height:1.5; }
   #stats b { color:var(--text); font-weight:600; }
   main { position:relative; padding:4px 12px 40px 44px; max-width:560px; }
@@ -80,6 +81,8 @@
     <button class="btn" id="toggle-ui">Show stock UI</button>
     <button class="btn" id="latency">Latency test</button>
     <button class="btn" id="reload">Reload startup patch</button>
+    <button class="btn" id="undo" disabled>Undo</button>
+    <button class="btn" id="redo" disabled>Redo</button>
   </div>
   <div id="stats">loading engine…</div>
 </header>
@@ -126,8 +129,12 @@ function bootBridge() {
     meterMax: Module.cwrap('cardinalweb_meter_max', 'number', []),
     addCable: Module.cwrap('cardinalweb_add_cable', 'number', ['number', 'number', 'number', 'number']),
     removeCable: Module.cwrap('cardinalweb_remove_cable', 'number', ['number']),
+    paramCommit: Module.cwrap('cardinalweb_param_commit', null, ['number', 'number', 'number', 'number']),
+    canUndo: Module.cwrap('cardinalweb_can_undo', 'number', []), canRedo: Module.cwrap('cardinalweb_can_redo', 'number', []),
+    undoName: Module.cwrap('cardinalweb_undo_name', 'string', []), redoName: Module.cwrap('cardinalweb_redo_name', 'string', []),
+    undo: Module.cwrap('cardinalweb_undo', 'number', []), redo: Module.cwrap('cardinalweb_redo', 'number', []),
   };
-  B.setCpuMeter(1); B.setHidden(1); uiHidden = true;
+  B.setCpuMeter(1); B.setHidden(1); uiHidden = true; setTimeout(updateUndo, 0);
   document.getElementById('boot').remove();
   rebuild();
   requestAnimationFrame(frame);
@@ -169,7 +176,7 @@ function hideChip() { chip.classList.remove('show'); }
 function connect(a, b) { // a, b are jack elements of opposite kinds
   var out = a.dataset.k === 'o' ? a : b, inp = a.dataset.k === 'o' ? b : a;
   var id = B.addCable(+out.dataset.m, +out.dataset.p, +inp.dataset.m, +inp.dataset.p);
-  clearArm(); refreshCables();
+  clearArm(); refreshCables(); updateUndo();
   if (id >= 0) { inp.classList.add('hover'); setTimeout(() => inp.classList.remove('hover'), 350); }
 }
 function clearGhost() { document.getElementById('ghost').innerHTML = ''; }
@@ -198,7 +205,7 @@ function endDrag(e) { if (!drag || e.pointerId !== drag.id) return; var d = drag
   if (d.moved && under && under.classList.contains('target')) connect(arm.el, under); else if (d.moved && !under) { /* lifted on nothing: stay armed, hint says tap the other end */ } }
 document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
 document.getElementById('chip-cancel').onclick = clearArm;
-document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.replaceCable) { B.removeCable(arm.replaceCable.id); clearArm(); refreshCables(); } };
+document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.replaceCable) { B.removeCable(arm.replaceCable.id); clearArm(); refreshCables(); updateUndo(); } };
 // ---------- cards
 var J = {
   audio: '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="var(--audio)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
@@ -238,12 +245,17 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '
 document.addEventListener('pointerdown', e => {
   var track = e.target.closest('.track'); if (!track || !B) return;
   var el = track.closest('.bar'), mid = +el.dataset.m, pid = +el.dataset.p, m = mods.find(x => x.id === mid), p = m && m.params.find(x => x.id === pid); if (!p) return;
-  track.setPointerCapture(e.pointerId);
+  track.setPointerCapture(e.pointerId); var startValue = B.getParam(mid, pid);
   var move = ev => { var r = track.getBoundingClientRect(); var f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); var v = p.min + f * (p.max - p.min); if (p.snap) v = Math.round(v);
     B.setParam(mid, pid, v); p.value = v; var ff = (v - p.min) / (p.max - p.min || 1);
     track.querySelector('.fill').style.width = (ff*100) + '%'; track.querySelector('.knob').style.left = (ff*100) + '%'; p.display = B.paramDisplay(mid, pid); el.querySelector('.val').textContent = disp(p); };
-  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; };
+  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; B.paramCommit(mid, pid, startValue, B.getParam(mid, pid)); updateUndo(); };
 });
+function updateUndo() { var u = document.getElementById('undo'), r = document.getElementById('redo'); u.disabled = !B.canUndo(); r.disabled = !B.canRedo(); u.textContent = B.canUndo() ? 'Undo ' + B.undoName() : 'Undo'; r.textContent = B.canRedo() ? 'Redo ' + B.redoName() : 'Redo'; }
+function afterHistory() { refreshCables(); lastParamPoll = 0; updateUndo(); }
+document.getElementById('undo').onclick = () => { if (B && B.undo()) afterHistory(); };
+document.getElementById('redo').onclick = () => { if (B && B.redo()) afterHistory(); };
+document.addEventListener('keydown', e => { if (!B) return; var z = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'; if (!z) return; e.preventDefault(); if (e.shiftKey ? B.redo() : B.undo()) afterHistory(); });
 // ---------- per-frame: read signals, draw glyphs, stats
 var sig = null, smooth = {}, envTrace = {}, lastParamPoll = 0;
 function v(mid, kind, pid) { var i = watchIndex[mid + ':' + kind + pid]; return i == null ? 0 : sig[i]; }
