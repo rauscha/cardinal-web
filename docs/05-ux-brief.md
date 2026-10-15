@@ -35,17 +35,18 @@ permanently shrink the canvas.
 Three capabilities would change the design. Spikes ran on 2026-10-15
 (document 07); status after them:
 
-- **[RESOLVED, with a caveat] Loading a patch programmatically.** The
-  stock build loads a `.vcv` through its File menu and file input, proven
-  in the spike. A fork bridge function is the robust form and is planned.
+- **[RESOLVED] Loading a patch programmatically.** Proven end to end from
+  JavaScript against the stock build (synthetic menu taps plus a file
+  assigned to the created input). A fork bridge function is the robust
+  form and is planned, but lessons do not wait on it.
 - **[OPEN] Knowing which module was tapped.** Without it the help drawer is
   a searchable module list, not a context panel. A small C++ hook that posts
   a message on module selection would upgrade it. Design for the list; leave
   room for the upgrade.
 - **[RESOLVED] Gesture translation.** Synthetic touch and wheel events
   from page scripts drive the canvas once the user has tapped once. Long
-  press to context menu and ctrl-wheel zoom are proven; two-finger pan is
-  the one gesture still untested. No C++ touch work is required.
+  press to context menu, ctrl-wheel zoom and wheel pan are all proven. No
+  C++ touch work is required.
 
 ## 3. Orientation [DECISION]
 
@@ -147,7 +148,7 @@ Audio interruptions (phone call, Bluetooth switch, backgrounding) show one
 sheet: "Audio stopped. Tap to resume." If resume fails twice, the sheet
 says "Restarting audio engine" and does so. Rules in document 02 section 1.
 
-## 6. Gestures on the canvas [mostly proven, see document 07]
+## 6. Gestures on the canvas [proven, see document 07]
 
 | Gesture | Today | Intended |
 |---|---|---|

@@ -24,6 +24,10 @@ and can be re-run anywhere Node and Playwright exist. Everything below is
 | 12 | Synthetic `WheelEvent` with `ctrlKey` in the touch context | **Works**: the rack zoomed. Wheel handlers survive the touch switch. |
 | 13 | Synthetic long-press: `touchstart`, 2.3 s, `touchend` | **Works**: the ADSR module's context menu opened (ADSR, VCV, Info, Preset). |
 
+| 14 | Synthetic `WheelEvent` without `ctrlKey`, `deltaX` then `deltaY` | **Works**: the rack panned horizontally, then vertically. Two-finger pan can be translated to wheel events. |
+| 15 | Synthetic single-touch drag on empty rack | No visible effect (Rack treats it as a selection drag). Pan must go through wheel events. |
+| 16 | Fully scripted patch import: synthetic taps on File and Import patch, then a `File` assigned to the created input through `DataTransfer` and a `change` event | **Works end to end**: "Loading patch /userfiles/Lesson.vcv" with no human input. The input is created on demand with id `CardinalDGL_file_open`. |
+
 Screenshots: `docs/spikes/2026-10-15-mini-desktop-1280x720.png`,
 `...-phone-patch-import.png`, `...-phone-longpress-menu.png`.
 
@@ -34,16 +38,15 @@ Screenshots: `docs/spikes/2026-10-15-mini-desktop-1280x720.png`,
    user has tapped once (which the Start audio button guarantees). The stock
    backend already maps a two-second press to a right-click; our layer can
    shorten that to a normal long-press by sending `touchstart`, waiting, and
-   sending `touchend`, and can turn pinch into ctrl-wheel zoom. Two-finger
-   pan has no native path and needs either synthetic drag on empty rack or
-   a scroll via wheel events without ctrl (untested).
-2. **Loading a lesson patch: possible today, better with a bridge.** The
-   stock build loads a `.vcv` file through its File menu and a file input.
-   A shell could reproduce that with synthetic taps at menu coordinates and
-   a programmatic file assignment, but that is brittle. The right answer is
-   the small exported C function in our fork (load patch from a string),
-   which document 02 already lists. Our own build is required for the module
-   additions anyway.
+   sending `touchend`, turn pinch into ctrl-wheel zoom, and turn two-finger
+   drag into plain wheel events for pan. Every gesture in the UX brief's
+   table now has a proven path.
+2. **Loading a lesson patch: works today from JavaScript alone.** Test 16
+   drove the stock File menu with synthetic taps and handed the created file
+   input a patch built in memory. It depends on menu coordinates, so it is
+   brittle across Cardinal versions and zoom levels; the small exported
+   function in our fork (load patch from a string) is the robust form and
+   stays planned. But lessons no longer wait on the fork.
 3. **Module selection and knob values: still need the bridge.** Nothing in
    the stock build exposes them. The same thin fork bridge that loads
    patches should post selection and parameter changes to the page. This is
