@@ -42,8 +42,10 @@ exported from the fork's UI file) that hides the C++ UI at runtime and
 exposes patch load/save, module metadata, params and per-frame signal
 readout, plus add/remove cable. `shell/spike-b/` builds glyph cards for
 every module from that metadata and is live at `/spike-b/`; cables are
-patched by touch (press a jack, drag or lift-scroll-tap the other end;
-connected inputs offer Disconnect; cards never move). Engine CPU about
+patched by touch: you hold a plug (press an OUT for a new cable, press a
+connected IN to pick its cable up and move either end, tap a drawn cable
+for Move OUT end / Move IN end / Disconnect); drag with edge auto-scroll
+or lift-scroll-tap; cards never move; wires follow layout changes. Engine CPU about
 4 % either way; param-to-engine 38 ms. Undo/redo use Rack's history
 (cables and parameter gestures). Not yet built: add/remove modules from
 the page, saving, custom displays, audio-rate readout. The stock canvas stays as
@@ -139,7 +141,7 @@ Development planning happens in a Claude cloud session in this repo.
   mock at `/mock/` (`shell/mock/index.html`, docs/11 §8); Andrew: loves the
   cards, glyphs better for teaching. Test build 0.4 (2026-10-15) adds the
   engine bridge and the live glyph spike at `/spike-b/` (docs/12); 0.5
-  adds cables by touch there (docs/12 §6); 0.6 adds undo/redo (§7).
+  adds cables by touch there (docs/12 §6); 0.6 adds undo/redo (§7); 0.7 makes plugs pickable at either end (§8).
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,

@@ -19,7 +19,8 @@
   #stats { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:6px; line-height:1.5; }
   #stats b { color:var(--text); font-weight:600; }
   main { position:relative; padding:4px 12px 40px 44px; max-width:560px; }
-  #wires { position:absolute; left:0; top:0; width:44px; height:100%; pointer-events:none; }
+  #wires { position:absolute; left:0; top:0; width:44px; height:100%; pointer-events:none; overflow:visible; }
+  #wires .wire-hit { pointer-events:stroke; cursor:pointer; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin:12px 0; overflow:hidden; }
   .card .hd { display:flex; align-items:baseline; gap:10px; padding:12px 14px 6px; }
   .card .hd h2 { margin:0; font-size:17px; font-weight:700; }
@@ -129,6 +130,7 @@ function bootBridge() {
     meterMax: Module.cwrap('cardinalweb_meter_max', 'number', []),
     addCable: Module.cwrap('cardinalweb_add_cable', 'number', ['number', 'number', 'number', 'number']),
     removeCable: Module.cwrap('cardinalweb_remove_cable', 'number', ['number']),
+    moveCable: Module.cwrap('cardinalweb_move_cable', 'number', ['number', 'number', 'number', 'number', 'number']),
     paramCommit: Module.cwrap('cardinalweb_param_commit', null, ['number', 'number', 'number', 'number']),
     canUndo: Module.cwrap('cardinalweb_can_undo', 'number', []), canRedo: Module.cwrap('cardinalweb_can_redo', 'number', []),
     undoName: Module.cwrap('cardinalweb_undo_name', 'string', []), redoName: Module.cwrap('cardinalweb_redo_name', 'string', []),
@@ -157,30 +159,56 @@ function rebuild() {
 function refreshCables() { cables = JSON.parse(B.cablesJson()); markConnected(); drawWires(); }
 function markConnected() { document.querySelectorAll('.jack').forEach(j => j.classList.remove('connected'));
   cables.forEach(c => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId); if (a) a.classList.add('connected'); if (b) b.classList.add('connected'); }); }
-// ---------- patching: press OUT (or IN), drag to the other end, or lift and tap it later
+// ---------- patching. Model: you hold a PLUG, not a jack.
+//  press an OUT jack            -> new cable from it (outputs can feed many inputs, as in Rack)
+//  press a free IN jack         -> new cable into it
+//  press a connected IN jack    -> you pick up that cable's plug: drop on another IN to move it, or on an OUT to change its source
+//  tap a drawn cable            -> chip: Move OUT end / Move IN end / Disconnect
+//  finish by drag (edge auto-scroll) or by lift, scroll, tap. Cards never move.
 var arm = null, drag = null, lastPointer = null, autoScrollRaf = 0;
 var chip = document.getElementById('chip');
 function jackOf(el) { return el && el.closest ? el.closest('.jack[data-k]') : null; }
+function jackEl(mid, k, pid) { return document.getElementById('j-' + mid + '-' + k + pid); }
 function modName(mid) { var m = mods.find(x => x.id === mid); return m ? m.name : '?'; }
 function cableOnInput(mid, pid) { return cables.find(c => c.inputModuleId === mid && c.inputId === pid); }
-function setArm(j, opts) {
-  clearArm(); if (!j) return;
-  arm = { el: j, mid: +j.dataset.m, pid: +j.dataset.p, kind: j.dataset.k, type: j.dataset.t, replaceCable: opts && opts.replaceCable || null };
-  j.classList.add('armed');
-  document.querySelectorAll('.jack[data-k="' + (arm.kind === 'o' ? 'i' : 'o') + '"]').forEach(t => { t.classList.add('target'); if (t.dataset.t === arm.type) t.classList.add('match'); });
-  showChip((arm.kind === 'o' ? '<b>' + esc(modName(arm.mid)) + ' › ' + esc(j.dataset.n) + '</b> · drag or tap an <b>IN</b> jack to connect' : '<b>' + esc(modName(arm.mid)) + ' ‹ ' + esc(j.dataset.n) + '</b> · drag or tap an <b>OUT</b> jack to connect') + (arm.replaceCable ? ' · currently from <b>' + esc(modName(arm.replaceCable.outputModuleId)) + '</b>' : ''), !!arm.replaceCable);
+function cablesOnOutput(mid, pid) { return cables.filter(c => c.outputModuleId === mid && c.outputId === pid); }
+function cableLabel(c) { var o = jackEl(c.outputModuleId, 'o', c.outputId), i = jackEl(c.inputModuleId, 'i', c.inputId); return '<b>' + esc(modName(c.outputModuleId)) + ' › ' + esc(o ? o.dataset.n : '?') + '</b> → <b>' + esc(modName(c.inputModuleId)) + ' › ' + esc(i ? i.dataset.n : '?') + '</b>'; }
+// arm: { el: the fixed jack the ghost is drawn from, type, targets: 'i'|'o'|'io', cable: cable being moved or null, newFrom: jack element when making a new cable }
+function setArm(a, html, canDisconnect) {
+  clearArm(); arm = a; a.el.classList.add('armed');
+  document.querySelectorAll('.jack[data-k]').forEach(t => { if (t === a.el) return; if (a.targets.indexOf(t.dataset.k) < 0) return; if (a.cable && t.dataset.k === 'i' && +t.dataset.m === a.cable.inputModuleId && +t.dataset.p === a.cable.inputId) return;
+    t.classList.add('target'); if (t.dataset.t === a.type) t.classList.add('match'); });
+  showChip(html, canDisconnect); drawWires();
 }
-function clearArm() { if (arm) arm.el.classList.remove('armed'); arm = null; document.querySelectorAll('.jack.target, .jack.hover').forEach(t => t.classList.remove('target', 'match', 'hover')); hideChip(); clearGhost(); }
-function showChip(html, canDisconnect) { chip.querySelector('.t').innerHTML = html; document.getElementById('chip-disconnect').style.display = canDisconnect ? '' : 'none'; chip.classList.add('show'); }
+function clearArm() { if (arm) arm.el.classList.remove('armed'); var had = !!arm; arm = null; document.querySelectorAll('.jack.target, .jack.hover').forEach(t => t.classList.remove('target', 'match', 'hover')); hideChip(); clearGhost(); if (had) drawWires(); }
+function showChip(html, canDisconnect, extra) { chip.querySelector('.t').innerHTML = html; document.getElementById('chip-disconnect').style.display = canDisconnect ? '' : 'none'; chip.querySelectorAll('.extra').forEach(b => b.remove());
+  (extra || []).forEach(x => { var b = document.createElement('button'); b.className = 'extra'; b.textContent = x[0]; b.onclick = x[1]; chip.insertBefore(b, document.getElementById('chip-disconnect')); }); chip.classList.add('show'); }
 function hideChip() { chip.classList.remove('show'); }
-function connect(a, b) { // a, b are jack elements of opposite kinds
-  var out = a.dataset.k === 'o' ? a : b, inp = a.dataset.k === 'o' ? b : a;
-  var id = B.addCable(+out.dataset.m, +out.dataset.p, +inp.dataset.m, +inp.dataset.p);
-  clearArm(); refreshCables(); updateUndo();
-  if (id >= 0) { inp.classList.add('hover'); setTimeout(() => inp.classList.remove('hover'), 350); }
+function pickUpInput(j) { // hold the plug that sits in this connected input
+  var c = cableOnInput(+j.dataset.m, +j.dataset.p), o = jackEl(c.outputModuleId, 'o', c.outputId); if (!o) return;
+  setArm({ el: o, type: j.dataset.t, targets: 'io', cable: c, held: j }, 'Holding the cable from ' + cableLabel(c) + '<br>drop on another <b>IN</b> to move it, on an <b>OUT</b> to change its source', true);
+}
+function startNew(j) {
+  var n = j.dataset.k === 'o' ? cablesOnOutput(+j.dataset.m, +j.dataset.p).length : 0;
+  setArm({ el: j, type: j.dataset.t, targets: j.dataset.k === 'o' ? 'i' : 'o', cable: null }, '<b>' + esc(modName(+j.dataset.m)) + ' › ' + esc(j.dataset.n) + '</b> · drag or tap ' + (j.dataset.k === 'o' ? 'an <b>IN</b>' : 'an <b>OUT</b>') + ' jack to connect' + (n ? ' · ' + n + ' cable' + (n > 1 ? 's' : '') + ' already here, tap one to move it' : ''), false);
+}
+function pickCable(c) { // tapped a drawn cable
+  var o = jackEl(c.outputModuleId, 'o', c.outputId), i = jackEl(c.inputModuleId, 'i', c.inputId); if (!o || !i) return;
+  clearArm(); arm = { el: i, type: i.dataset.t, targets: '', cable: c, picking: true }; i.classList.add('armed'); o.classList.add('armed');
+  showChip(cableLabel(c), true, [['Move OUT end', () => setArm({ el: i, type: i.dataset.t, targets: 'o', cable: c }, 'Moving the <b>OUT</b> end of ' + cableLabel(c) + ' · drop or tap an <b>OUT</b> jack', true)],
+                                  ['Move IN end', () => setArm({ el: o, type: o.dataset.t, targets: 'i', cable: c }, 'Moving the <b>IN</b> end of ' + cableLabel(c) + ' · drop or tap an <b>IN</b> jack', true)]]);
+  drawWires();
+}
+function dropOn(t) { // finish the armed action on target jack t
+  var a = arm; if (!a || !t.classList.contains('target')) return;
+  if (a.cable) { var c = a.cable; var outM = c.outputModuleId, outP = c.outputId, inM = c.inputModuleId, inP = c.inputId;
+    if (t.dataset.k === 'i') { inM = +t.dataset.m; inP = +t.dataset.p; } else { outM = +t.dataset.m; outP = +t.dataset.p; }
+    B.moveCable(c.id, outM, outP, inM, inP); }
+  else { var out = a.el.dataset.k === 'o' ? a.el : t, inp = a.el.dataset.k === 'o' ? t : a.el; B.addCable(+out.dataset.m, +out.dataset.p, +inp.dataset.m, +inp.dataset.p); }
+  clearArm(); refreshCables(); updateUndo(); t.classList.add('hover'); setTimeout(() => t.classList.remove('hover'), 350);
 }
 function clearGhost() { document.getElementById('ghost').innerHTML = ''; }
-function drawGhost(x, y) { if (!arm) return; var r = arm.el.querySelector('svg').getBoundingClientRect(); var x1 = r.left + r.width/2, y1 = r.top + r.height/2; var col = COLORS[arm.type] || '#fff';
+function drawGhost(x, y) { if (!arm || !arm.el) return; var r = arm.el.querySelector('svg').getBoundingClientRect(); var x1 = r.left + r.width/2, y1 = r.top + r.height/2; var col = COLORS[arm.type] || '#fff';
   document.getElementById('ghost').innerHTML = '<path d="M' + x1 + ' ' + y1 + ' C' + (x1 + (x - x1) * 0.4) + ' ' + (y1 + 40) + ', ' + (x - (x - x1) * 0.4) + ' ' + (y + 40) + ', ' + x + ' ' + y + '" stroke="' + col + '" stroke-width="4" fill="none" opacity=".9"/><circle cx="' + x + '" cy="' + y + '" r="7" fill="' + col + '"/>'; }
 function autoScroll() { autoScrollRaf = 0; if (!drag || !lastPointer) return; var landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; var edge = 90;
   if (landscape) { var main = document.getElementById('main'); if (lastPointer.x < edge) main.scrollLeft -= (edge - lastPointer.x) / 4; else if (lastPointer.x > innerWidth - edge) main.scrollLeft += (lastPointer.x - (innerWidth - edge)) / 4; }
@@ -189,11 +217,13 @@ function autoScroll() { autoScrollRaf = 0; if (!drag || !lastPointer) return; va
   drawGhost(lastPointer.x, lastPointer.y); autoScrollRaf = requestAnimationFrame(autoScroll); }
 document.addEventListener('pointerdown', e => {
   if (!B) return; if (e.target.closest('#chip')) return;
+  var wire = e.target.closest ? e.target.closest('.wire-hit') : null;
+  if (wire) { var c = cables.find(x => x.id === +wire.dataset.cable); if (c) pickCable(c); return; }
   var j = jackOf(e.target);
   if (!j) { if (arm && !e.target.closest('.track, .run, .btn, summary')) clearArm(); return; }
   e.preventDefault();
-  if (arm) { if (j === arm.el) { clearArm(); return; } if (j.dataset.k !== arm.kind) { connect(arm.el, j); return; } setArm(j); }
-  else { var existing = j.dataset.k === 'i' ? cableOnInput(+j.dataset.m, +j.dataset.p) : null; setArm(j, { replaceCable: existing }); }
+  if (arm && !arm.picking) { if (j === arm.el || j === arm.held) { clearArm(); return; } if (j.classList.contains('target')) { dropOn(j); return; } }
+  if (j.dataset.k === 'i' && cableOnInput(+j.dataset.m, +j.dataset.p)) pickUpInput(j); else startNew(j);
   drag = { id: e.pointerId, moved: false, sx: e.clientX, sy: e.clientY }; lastPointer = { x: e.clientX, y: e.clientY };
   try { j.setPointerCapture(e.pointerId); } catch (err) {}
   if (!autoScrollRaf) autoScrollRaf = requestAnimationFrame(autoScroll);
@@ -202,10 +232,10 @@ document.addEventListener('pointermove', e => { if (!drag || e.pointerId !== dra
   var under = jackOf(document.elementFromPoint(e.clientX, e.clientY)); document.querySelectorAll('.jack.hover').forEach(t => t.classList.remove('hover')); if (under && under.classList.contains('target')) under.classList.add('hover'); });
 function endDrag(e) { if (!drag || e.pointerId !== drag.id) return; var d = drag; drag = null; lastPointer = null; clearGhost();
   if (!arm) return; var under = jackOf(document.elementFromPoint(e.clientX, e.clientY));
-  if (d.moved && under && under.classList.contains('target')) connect(arm.el, under); else if (d.moved && !under) { /* lifted on nothing: stay armed, hint says tap the other end */ } }
+  if (d.moved && under && under.classList.contains('target')) dropOn(under); }
 document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
 document.getElementById('chip-cancel').onclick = clearArm;
-document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.replaceCable) { B.removeCable(arm.replaceCable.id); clearArm(); refreshCables(); updateUndo(); } };
+document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.cable) { B.removeCable(arm.cable.id); clearArm(); refreshCables(); updateUndo(); } };
 // ---------- cards
 var J = {
   audio: '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="var(--audio)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
@@ -299,18 +329,26 @@ function sm(key, val) { var s = smooth[key] == null ? val : smooth[key] + (val -
 function noteName(volts) { var n = Math.round(volts * 12) + 60; var names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1); }
 function showStats() { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var fr = stats.frames.slice().sort((a, b) => a - b); var avg = fr.reduce((a, b) => a + b, 0) / (fr.length || 1), p95 = fr[Math.floor(fr.length * 0.95)] || 0;
   document.getElementById('stats').innerHTML = 'engine <b>' + (B.meterAvg() * 100).toFixed(1) + '%</b> avg / <b>' + (B.meterMax() * 100).toFixed(1) + '%</b> max of real time · page frame <b>' + avg.toFixed(1) + ' ms</b> avg, <b>' + p95.toFixed(1) + ' ms</b> p95 · audio <b>' + (ctx ? ctx.state : '–') + '</b> ' + (ctx ? ctx.sampleRate + ' Hz, buffer ' + (Module.WebAudioBridge.processor ? Module.WebAudioBridge.processor.bufferSize : '?') : '') + ' · C++ UI <b>' + (uiHidden ? 'hidden' : 'shown') + '</b> · ' + mods.length + ' modules, ' + watch.length + ' signals watched' + (latencyTest && latencyTest.done ? ' · <b>param→engine ' + latencyTest.ms.toFixed(0) + ' ms</b>' : (window.lastLatency ? ' · last latency ' + window.lastLatency.toFixed(0) + ' ms' : '')); }
-// ---------- wires (as in the mock)
+// ---------- wires: redrawn whenever a card changes size (details open, orientation, scroll)
 function drawWires() { var svg = document.getElementById('wires'); if (!svg) return; var main = document.getElementById('main'), mr = main.getBoundingClientRect();
   var landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; svg.setAttribute('height', main.scrollHeight); svg.style.width = landscape ? main.scrollWidth + 'px' : '44px'; svg.setAttribute('width', landscape ? main.scrollWidth : 44); var html = '';
   cables.forEach((c, k) => { var a = document.querySelector('#j-' + c.outputModuleId + '-o' + c.outputId + ' svg'), b = document.querySelector('#j-' + c.inputModuleId + '-i' + c.inputId + ' svg'); if (!a || !b) return;
     var im = mods.find(m => m.id === c.inputModuleId), ip = im && im.inputs.find(p => p.id === c.inputId); var col = COLORS[im && ip ? portType(im, ip) : 'audio'];
-    var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    var held = arm && arm.cable && arm.cable.id === c.id; var op = held && !arm.picking ? '.25' : (held ? '1' : '.8'), sw = held && arm.picking ? 5 : 3;
+    var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); var d;
     if (landscape) { var x1 = ra.left + ra.width/2 - mr.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mr.top, x2 = rb.left + rb.width/2 - mr.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mr.top, dx = Math.max(60, (x2 - x1) * 0.4), sag = 40 + k * 6;
-      html += '<path d="M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + (y1 + sag) + ', ' + (x2 - dx) + ' ' + (y2 + sag) + ', ' + x2 + ' ' + y2 + '" stroke="' + col + '" stroke-width="3" fill="none" opacity=".8"/>'; }
+      d = 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + (y1 + sag) + ', ' + (x2 - dx) + ' ' + (y2 + sag) + ', ' + x2 + ' ' + y2;
+      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + sw + '" fill="none" opacity="' + op + '"/>'; }
     else { var y1 = ra.top + ra.height/2 - mr.top, y2 = rb.top + rb.height/2 - mr.top, x = 10 + (k % 4) * 8;
-      html += '<path d="M' + x + ' ' + y1 + ' V' + y2 + '" stroke="' + col + '" stroke-width="2.5" fill="none" opacity=".85"/><path d="M' + x + ' ' + y1 + ' H40" stroke="' + col + '" stroke-width="2.5" fill="none"/><path d="M' + x + ' ' + y2 + ' H40" stroke="' + col + '" stroke-width="2.5" fill="none"/><circle cx="' + x + '" cy="' + y1 + '" r="4" fill="' + col + '"/><circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + col + '"/>'; } });
+      d = 'M40 ' + y1 + ' H' + x + ' V' + y2 + ' H40';
+      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (held && arm.picking ? 4 : 2.5) + '" fill="none" opacity="' + op + '"/><circle cx="' + x + '" cy="' + y1 + '" r="4" fill="' + col + '"/><circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + col + '"/>'; }
+    html += '<path class="wire-hit" data-cable="' + c.id + '" d="' + d + '" stroke="transparent" stroke-width="22" fill="none" style="pointer-events:stroke"/>'; });
   svg.innerHTML = html; }
-window.addEventListener('resize', () => requestAnimationFrame(drawWires));
+var wiresRaf = 0; function queueWires() { if (!wiresRaf) wiresRaf = requestAnimationFrame(() => { wiresRaf = 0; drawWires(); }); }
+document.addEventListener('toggle', queueWires, true);
+new ResizeObserver(queueWires).observe(document.getElementById('main'));
+new MutationObserver(() => { document.querySelectorAll('.card').forEach(c => { if (!c.dataset.ro) { c.dataset.ro = 1; new ResizeObserver(queueWires).observe(c); } }); }).observe(document.getElementById('main'), { childList: true });
+window.addEventListener('resize', queueWires);
 // ---------- buttons
 document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio running'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
 document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };

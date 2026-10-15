@@ -173,3 +173,42 @@ keeps running. Because the actions are Rack's, the stock canvas (the
 fallback view) shares the same undo stack.
 
 Not done: module add and remove, saving.
+
+## 8. Plugs, not jacks (test build 0.7)
+
+Andrew's two findings from the desktop: opening a card's "More" section
+left the drawn cables where they were, and the model let you draw from a
+jack but not pick up an existing cable at either end, which is what hands
+do with a real rack.
+
+**Wires now follow the layout.** They are redrawn whenever any card
+changes size (a ResizeObserver per card and on the column), on `details`
+toggles, resize and orientation change. Verified: with a cable into ADSR,
+opening VCO's More section moved the jack by 230 px and the wire end moved
+with it in both orientations.
+
+**The patching model is now "you hold a plug":**
+
+| Press on | Means |
+|---|---|
+| an OUT jack | start a new cable from it (outputs feed many inputs; Rack's rule). The chip says how many cables are already there |
+| a free IN jack | start a new cable into it |
+| a connected IN jack | pick up the plug that sits in it: the wire dims, a ghost runs from its source; drop on another IN to move the cable, or on an OUT to change its source; Disconnect is offered |
+| a drawn cable | the chip names both ends and offers **Move OUT end**, **Move IN end**, **Disconnect** |
+
+Every move and every replace of an occupied input is one Rack
+`ComplexAction` ("move cable", "replace cable"), so one undo restores the
+previous cable rather than leaving the input empty.
+
+Bridge additions: `cardinalweb_move_cable(cableId, out, in)`; `add_cable`
+now records the cables it displaces.
+
+Verified headlessly (`docs/spikes/2026-10-15-move-log.txt`): pick up the
+plug in VCO pitch and drop on VCO FM moves the cable (count unchanged);
+pick it up again and tap SEQ 3 CV 3 re-sources it; two undos restore the
+start; tapping the drawn cable offers the three actions; Move OUT end to
+CV 2 works; replacing ADSR → VCA CV with SEQ 3 CV 1 then undo brings the
+ADSR cable back; pressing the busy VCA output offers a new cable and
+reports two existing. Audio ran throughout.
+
+Still not built: module add and remove, saving.

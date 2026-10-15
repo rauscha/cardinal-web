@@ -1,5 +1,5 @@
 diff --git a/src/CardinalUI.cpp b/src/CardinalUI.cpp
-index 278e36a..2c05932 100644
+index 278e36a..350c099 100644
 --- a/src/CardinalUI.cpp
 +++ b/src/CardinalUI.cpp
 @@ -17,10 +17,14 @@
@@ -69,7 +69,7 @@ index 278e36a..2c05932 100644
         #ifdef DPF_RUNTIME_TESTING
          if (inSelfTest)
          {
-@@ -1276,4 +1301,377 @@ UI* createUI()
+@@ -1276,4 +1301,433 @@ UI* createUI()
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -339,35 +339,91 @@ index 278e36a..2c05932 100644
 +    return n;
 +}
 +
-+// Connect an output to an input the way the stock UI does (a CableWidget owning an engine Cable).
-+// An input already in use is cleared first. Returns the new cable id, or -1.
-+EMSCRIPTEN_KEEPALIVE double cardinalweb_add_cable(const double outModuleId, const int outPortId, const double inModuleId, const int inPortId)
++namespace cardinalweb {
++
++// Remove every cable on an input, recording each removal into the given complex action.
++static void clearInputWithHistory(CardinalPluginContext* const c, rack::app::PortWidget* const inPw, rack::history::ComplexAction* const h)
 +{
-+    CardinalPluginContext* const c = cardinalweb::ctx();
-+    if (c == nullptr) return -1;
-+    const cardinalweb::Ctx sc(c);
-+    rack::app::ModuleWidget* const outMw = c->scene->rack->getModule(int64_t(outModuleId));
-+    rack::app::ModuleWidget* const inMw = c->scene->rack->getModule(int64_t(inModuleId));
-+    if (outMw == nullptr || inMw == nullptr) return -1;
-+    rack::app::PortWidget* const outPw = outMw->getOutput(outPortId);
-+    rack::app::PortWidget* const inPw = inMw->getInput(inPortId);
-+    if (outPw == nullptr || inPw == nullptr) return -1;
-+    c->scene->rack->clearCablesOnPort(inPw);
++    for (rack::app::CableWidget* const cw : c->scene->rack->getCablesOnPort(inPw))
++    {
++        if (cw->getCable() == nullptr) continue;
++        rack::history::CableRemove* const hr = new rack::history::CableRemove;
++        hr->setCable(cw);
++        h->push(hr);
++        c->scene->rack->removeCable(cw);
++        delete cw;
++    }
++}
++
++// Create a cable the way the stock UI does: a CableWidget owning the engine Cable. Records a CableAdd.
++static double addCableWithHistory(CardinalPluginContext* const c, rack::app::PortWidget* const outPw, rack::app::PortWidget* const inPw, rack::history::ComplexAction* const h)
++{
 +    rack::app::CableWidget* const cw = new rack::app::CableWidget;
 +    cw->outputPort = outPw;
 +    cw->inputPort = inPw;
 +    cw->color = c->scene->rack->getNextCableColor();
 +    cw->updateCable();
 +    c->scene->rack->addCable(cw);
-+    if (cw->getCable() != nullptr)
++    if (cw->getCable() == nullptr) return -1;
++    rack::history::CableAdd* const ha = new rack::history::CableAdd;
++    ha->setCable(cw);
++    h->push(ha);
++    return double(cw->getCable()->id);
++}
++
++static bool resolvePorts(CardinalPluginContext* const c, const double outModuleId, const int outPortId, const double inModuleId, const int inPortId,
++                         rack::app::PortWidget*& outPw, rack::app::PortWidget*& inPw)
++{
++    rack::app::ModuleWidget* const outMw = c->scene->rack->getModule(int64_t(outModuleId));
++    rack::app::ModuleWidget* const inMw = c->scene->rack->getModule(int64_t(inModuleId));
++    if (outMw == nullptr || inMw == nullptr) return false;
++    outPw = outMw->getOutput(outPortId);
++    inPw = inMw->getInput(inPortId);
++    return outPw != nullptr && inPw != nullptr;
++}
++
++} // namespace cardinalweb
++
++// Connect an output to an input. An input already in use is cleared first; the whole thing is one undo step.
++// Returns the new cable id, or -1.
++EMSCRIPTEN_KEEPALIVE double cardinalweb_add_cable(const double outModuleId, const int outPortId, const double inModuleId, const int inPortId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return -1;
++    const cardinalweb::Ctx sc(c);
++    rack::app::PortWidget* outPw; rack::app::PortWidget* inPw;
++    if (!cardinalweb::resolvePorts(c, outModuleId, outPortId, inModuleId, inPortId, outPw, inPw)) return -1;
++    rack::history::ComplexAction* const h = new rack::history::ComplexAction;
++    const bool replaced = !c->scene->rack->getCablesOnPort(inPw).empty();
++    h->name = replaced ? "replace cable" : "connect cable";
++    cardinalweb::clearInputWithHistory(c, inPw, h);
++    const double id = cardinalweb::addCableWithHistory(c, outPw, inPw, h);
++    if (h->isEmpty()) delete h; else c->history->push(h);
++    return id;
++}
++
++// Move one end (or both) of an existing cable. One undo step. Returns the new cable id, or -1.
++EMSCRIPTEN_KEEPALIVE double cardinalweb_move_cable(const double cableId, const double outModuleId, const int outPortId, const double inModuleId, const int inPortId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return -1;
++    const cardinalweb::Ctx sc(c);
++    rack::app::CableWidget* const old = c->scene->rack->getCable(int64_t(cableId));
++    rack::app::PortWidget* outPw; rack::app::PortWidget* inPw;
++    if (old == nullptr || !cardinalweb::resolvePorts(c, outModuleId, outPortId, inModuleId, inPortId, outPw, inPw)) return -1;
++    rack::history::ComplexAction* const h = new rack::history::ComplexAction;
++    h->name = "move cable";
 +    {
-+        rack::history::CableAdd* const h = new rack::history::CableAdd;
-+        h->name = "connect cable";
-+        h->setCable(cw);
-+        c->history->push(h);
-+        return double(cw->getCable()->id);
++        rack::history::CableRemove* const hr = new rack::history::CableRemove;
++        hr->setCable(old);
++        h->push(hr);
++        c->scene->rack->removeCable(old);
++        delete old;
 +    }
-+    return -1;
++    cardinalweb::clearInputWithHistory(c, inPw, h);
++    const double id = cardinalweb::addCableWithHistory(c, outPw, inPw, h);
++    c->history->push(h);
++    return id;
 +}
 +
 +EMSCRIPTEN_KEEPALIVE int cardinalweb_remove_cable(const double cableId)
