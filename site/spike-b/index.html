@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#111111">
+<title>Cardinal Web spike B+: live glyphs on the real engine</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1f; --card2:#242428; --line:#3a3a40; --text:#ececec; --muted:#9a9aa3;
+          --audio:#ffb648; --cv:#5fb3ff; --gate:#f2f2f2; --clock:#b9b9b9; --accent:#e9e9e9; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--text); font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none; }
+  header { position:sticky; top:0; z-index:5; background:rgba(17,17,17,.94); backdrop-filter:blur(6px); padding:10px 12px 8px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0 0 6px; font-size:15px; font-weight:600; } header h1 span { color:var(--muted); font-weight:400; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .btn { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-weight:600; padding:9px 12px; border-radius:9px; }
+  .btn.primary { background:var(--accent); color:#111; border-color:var(--accent); }
+  #stats { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:6px; line-height:1.5; }
+  #stats b { color:var(--text); font-weight:600; }
+  main { position:relative; padding:4px 12px 40px 44px; max-width:560px; }
+  #wires { position:absolute; left:0; top:0; width:44px; height:100%; pointer-events:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin:12px 0; overflow:hidden; }
+  .card .hd { display:flex; align-items:baseline; gap:10px; padding:12px 14px 6px; }
+  .card .hd h2 { margin:0; font-size:17px; font-weight:700; }
+  .card .hd .what { color:var(--muted); font-size:13px; flex:1; }
+  .pic { display:block; width:100%; height:110px; background:#141417; }
+  .ctl { padding:6px 14px; }
+  .bar { display:grid; grid-template-columns:86px 1fr 74px; align-items:center; gap:10px; padding:6px 0; }
+  .bar label { color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar .track { position:relative; height:34px; background:#2b2b31; border-radius:8px; touch-action:none; }
+  .bar .fill { position:absolute; left:0; top:0; bottom:0; width:0; background:#4a4a55; border-radius:8px; }
+  .bar .knob { position:absolute; top:4px; bottom:4px; width:6px; margin-left:-3px; background:var(--accent); border-radius:3px; }
+  .bar .val { text-align:right; font-variant-numeric:tabular-nums; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .more { color:var(--muted); font-size:13px; padding:2px 14px 10px; }
+  .more summary { cursor:pointer; }
+  .ports { display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; padding:8px 14px 12px; border-top:1px solid var(--line); background:var(--card2); }
+  .ports h3 { margin:0 0 4px; font-size:11px; letter-spacing:.6px; color:var(--muted); font-weight:600; }
+  .jack { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13.5px; }
+  .jack.out { justify-content:flex-end; text-align:right; }
+  .jack svg { width:22px; height:22px; flex:none; opacity:.45; transition:opacity .08s linear; }
+  .jack.live svg { opacity:1; }
+  .jack .v { color:var(--muted); font-size:11px; min-width:38px; font-variant-numeric:tabular-nums; }
+  .jack.out .v { text-align:left; }
+  .steps { display:grid; grid-template-columns:repeat(8,1fr); gap:5px; padding:8px 14px 2px; }
+  .steps div { height:64px; border-radius:7px; background:#2b2b31; position:relative; overflow:hidden; }
+  .steps div i { position:absolute; left:0; right:0; bottom:0; background:#5a5a68; }
+  .steps div.cur { outline:2px solid var(--accent); }
+  .steps div b { position:absolute; left:0; right:0; bottom:4px; text-align:center; font-size:11px; color:var(--text); font-weight:600; }
+  .run { border:0; border-radius:10px; padding:12px 16px; font:inherit; font-weight:700; background:#3a3a42; color:var(--text); }
+  .run[aria-pressed="true"] { background:var(--accent); color:#111; }
+  #canvas_wrapper { --device-pixel-ratio:1; position:fixed; left:-10000px; top:0; width:900px; height:450px; transform-origin:0 0 0; transform:scale(calc(1 / var(--device-pixel-ratio))); }
+  #canvas_wrapper.shown { left:0; top:auto; bottom:0; width:100vw; height:60vh; z-index:20; background:#000; }
+  #canvas_file_open { display:none; }
+  #boot { padding:16px 12px; color:var(--muted); }
+  @media (orientation: landscape) and (min-width: 700px) {
+    main { max-width:none; display:flex; gap:12px; overflow-x:auto; padding-left:12px; }
+    .card { flex:0 0 340px; } #wires { width:100%; left:0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Spike B+ <span>· glyph cards driven by the real Cardinal engine · C++ canvas hidden</span></h1>
+  <div class="row">
+    <button class="btn primary" id="start">Tap to start audio</button>
+    <button class="btn" id="toggle-ui">Show stock UI</button>
+    <button class="btn" id="latency">Latency test</button>
+    <button class="btn" id="reload">Reload startup patch</button>
+  </div>
+  <div id="stats">loading engine…</div>
+</header>
+<div id="boot">Loading the engine (about 10 MB). The page builds its cards from the engine's own module list.</div>
+<main id="main"><svg id="wires"></svg></main>
+<div id="canvas_wrapper">
+  <input type="file" id="canvas_file_open">
+  <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+</div>
+<script>
+'use strict';
+// ---------- Emscripten module setup (same contract as the stock shell, canvas kept offscreen)
+var canvasWrapper = document.getElementById('canvas_wrapper');
+var simdSupported = WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]));
+var Module = {
+  preRun: [], postRun: function () { canvasWrapper.style.display = 'block'; window.dispatchEvent(new Event('resize')); setTimeout(bootBridge, 300); },
+  locateFile: function (p) { return '../' + (simdSupported ? p : p.replace('CardinalMini', 'CardinalMini-nosimd')); },
+  canvas: document.getElementById('canvas'),
+  setStatus: function (t) { var b = document.getElementById('boot'); if (b && t) b.textContent = t; },
+  totalDependencies: 0, monitorRunDependencies: function () {},
+  print: function (t) { console.log(t); }, printErr: function (t) { console.warn(t); }
+};
+window.addEventListener('load', function () { var s = document.createElement('script'); s.src = '../CardinalMini.js'; s.async = true; document.body.appendChild(s); });
+
+// ---------- bridge
+var B = null, uiHidden = false, mods = [], cables = [], watch = [], watchPtr = 0, watchIndex = {}, stats = { frames: [], last: 0 }, latencyTest = null;
+function bootBridge() {
+  if (typeof Module._cardinalweb_ready !== 'function') { document.getElementById('boot').textContent = 'This engine build has no cardinal-web bridge.'; return; }
+  if (!Module._cardinalweb_ready()) { setTimeout(bootBridge, 200); return; }
+  B = {
+    loadPatch: Module.cwrap('cardinalweb_load_patch', 'number', ['string']),
+    modulesJson: Module.cwrap('cardinalweb_get_modules_json', 'string', []),
+    cablesJson: Module.cwrap('cardinalweb_get_cables_json', 'string', []),
+    setParam: Module.cwrap('cardinalweb_set_param', null, ['number', 'number', 'number']),
+    getParam: Module.cwrap('cardinalweb_get_param', 'number', ['number', 'number']),
+    paramDisplay: Module.cwrap('cardinalweb_get_param_display', 'string', ['number', 'number']),
+    watch: Module.cwrap('cardinalweb_watch', 'number', ['string']),
+    readWatched: Module.cwrap('cardinalweb_read_watched', 'number', ['number', 'number']),
+    setHidden: Module.cwrap('cardinalweb_set_ui_hidden', null, ['number']),
+    setCpuMeter: Module.cwrap('cardinalweb_set_cpu_meter', null, ['number']),
+    meterAvg: Module.cwrap('cardinalweb_meter_average', 'number', []),
+    meterMax: Module.cwrap('cardinalweb_meter_max', 'number', []),
+  };
+  B.setCpuMeter(1); B.setHidden(1); uiHidden = true;
+  document.getElementById('boot').remove();
+  rebuild();
+  requestAnimationFrame(frame);
+}
+function rebuild() {
+  mods = JSON.parse(B.modulesJson()); cables = JSON.parse(B.cablesJson());
+  mods.sort((a, b) => (a.pos ? a.pos[1] * 1000 + a.pos[0] : 0) - (b.pos ? b.pos[1] * 1000 + b.pos[0] : 0));
+  var main = document.getElementById('main'); main.innerHTML = '<svg id="wires"></svg>' + mods.map(card).join('');
+  // watch list: every input and output voltage, in module order
+  watch = []; watchIndex = {};
+  mods.forEach(m => { m.inputs.forEach(p => { watchIndex[m.id + ':i' + p.id] = watch.length; watch.push([m.id, 0, p.id]); });
+                      m.outputs.forEach(p => { watchIndex[m.id + ':o' + p.id] = watch.length; watch.push([m.id, 1, p.id]); }); });
+  if (watchPtr) Module._free && Module._free(watchPtr);
+  watchPtr = Module._malloc(4 * Math.max(1, watch.length));
+  B.watch(JSON.stringify(watch));
+  mods.forEach(m => { if (m.model === 'SEQ3') { var r = document.getElementById('run-' + m.id); if (r) r.onclick = () => { B.setParam(m.id, 1, 1); setTimeout(() => B.setParam(m.id, 1, 0), 60); }; } });
+  requestAnimationFrame(drawWires);
+}
+// ---------- cards
+var J = {
+  audio: '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="var(--audio)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
+  cv:    '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--cv)" stroke-width="3"/><circle cx="11" cy="11" r="3" fill="var(--cv)"/></svg>',
+  gate:  '<svg viewBox="0 0 22 22"><rect x="2.5" y="2.5" width="17" height="17" rx="3.5" fill="var(--gate)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
+  clock: '<svg viewBox="0 0 22 22"><polygon points="11,1.5 20.5,11 11,20.5 1.5,11" fill="var(--clock)"/><circle cx="11" cy="11" r="3.2" fill="#111"/></svg>',
+};
+var COLORS = { audio: 'var(--audio)', cv: 'var(--cv)', gate: 'var(--gate)', clock: 'var(--clock)' };
+function portType(m, p) { var n = p.name.toUpperCase();
+  if (/CLOCK|CLK/.test(n)) return 'clock'; if (/GATE|TRIG|RUN|RESET|RST|SYNC/.test(n)) return 'gate';
+  if (/V\/OCT|PITCH|1V\/O|CV|ENV|LFO|MOD|FM|PW/.test(n) || /ADSR|LFO|Slew/.test(m.model) && !/IN|OUT/.test(n)) return 'cv';
+  if (/SEQ3/.test(m.model) && /STEP|OUT/.test(n)) return 'cv'; return 'audio'; }
+var GLYPH = { SEQ3: 1, VCO: 1, ADSR: 1, 'VCA-1': 1, HostAudio2: 1 };
+var PRIMARY = { SEQ3: [0, 3], VCO: [2, 3, 5], ADSR: [0, 1, 2, 3], 'VCA-1': [0], HostAudio2: [0] };
+function card(m) {
+  var prim = PRIMARY[m.model] || m.params.slice(0, 4).map(p => p.id);
+  var primParams = m.params.filter(p => prim.indexOf(p.id) >= 0), rest = m.params.filter(p => prim.indexOf(p.id) < 0);
+  var body = '';
+  if (m.model === 'SEQ3') body = '<div class="steps" id="steps-' + m.id + '">' + [0,1,2,3,4,5,6,7].map(i => '<div><i></i><b></b></div>').join('') + '</div>' +
+    '<div class="ctl"><div class="bar"><label>Run</label><button class="run" id="run-' + m.id + '">RUN / STOP</button><div class="val" id="running-' + m.id + '"></div></div>';
+  else if (GLYPH[m.model]) body = '<canvas class="pic" id="pic-' + m.id + '" width="680" height="220"></canvas><div class="ctl">';
+  else body = '<div class="ctl">';
+  body += primParams.map(p => bar(m, p)).join('') + '</div>';
+  if (rest.length) body += '<details class="more"><summary>More (' + rest.length + ')</summary>' + rest.map(p => bar(m, p)).join('') + '</details>';
+  return '<section class="card" id="card-' + m.id + '"><div class="hd"><h2>' + esc(m.name) + '</h2><div class="what">' + esc(m.description || m.plugin) + '</div></div>' + body + jacks(m) + '</section>';
+}
+function bar(m, p) { var v = (p.value - p.min) / (p.max - p.min || 1);
+  return '<div class="bar" data-m="' + m.id + '" data-p="' + p.id + '" title="' + esc(p.description) + '"><label>' + esc(p.name) + '</label><div class="track"><div class="fill" style="width:' + (v*100) + '%"></div><div class="knob" style="left:' + (v*100) + '%"></div></div><div class="val">' + esc(disp(p)) + '</div></div>'; }
+function disp(p) { return p.display + (p.unit && p.display.indexOf(p.unit.trim()) < 0 ? ' ' + p.unit.trim() : ''); }
+function jacks(m) {
+  var ins = m.inputs.map(p => '<div class="jack" id="j-' + m.id + '-i' + p.id + '">' + J[portType(m, p)] + '<span>' + esc(p.name) + '</span><span class="v"></span></div>').join('');
+  var outs = m.outputs.map(p => '<div class="jack out" id="j-' + m.id + '-o' + p.id + '"><span class="v"></span><span>' + esc(p.name) + '</span>' + J[portType(m, p)] + '</div>').join('');
+  return '<div class="ports"><div><h3>IN</h3>' + (ins || '<div class="jack"><span class="v">none</span></div>') + '</div><div><h3>OUT</h3>' + (outs || '<div class="jack"><span class="v">none</span></div>') + '</div></div>';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+// drag a bar -> setParam
+document.addEventListener('pointerdown', e => {
+  var track = e.target.closest('.track'); if (!track || !B) return;
+  var el = track.closest('.bar'), mid = +el.dataset.m, pid = +el.dataset.p, m = mods.find(x => x.id === mid), p = m && m.params.find(x => x.id === pid); if (!p) return;
+  track.setPointerCapture(e.pointerId);
+  var move = ev => { var r = track.getBoundingClientRect(); var f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); var v = p.min + f * (p.max - p.min); if (p.snap) v = Math.round(v);
+    B.setParam(mid, pid, v); p.value = v; var ff = (v - p.min) / (p.max - p.min || 1);
+    track.querySelector('.fill').style.width = (ff*100) + '%'; track.querySelector('.knob').style.left = (ff*100) + '%'; p.display = B.paramDisplay(mid, pid); el.querySelector('.val').textContent = disp(p); };
+  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; };
+});
+// ---------- per-frame: read signals, draw glyphs, stats
+var sig = null, smooth = {}, envTrace = {}, lastParamPoll = 0;
+function v(mid, kind, pid) { var i = watchIndex[mid + ':' + kind + pid]; return i == null ? 0 : sig[i]; }
+function frame(now) {
+  if (stats.last) { stats.frames.push(now - stats.last); if (stats.frames.length > 120) stats.frames.shift(); } stats.last = now;
+  var n = B.readWatched(watchPtr, watch.length); sig = Module.HEAPF32.subarray(watchPtr >> 2, (watchPtr >> 2) + n);
+  // jack activity and readouts
+  watch.forEach((w, i) => { var el = document.getElementById('j-' + w[0] + '-' + (w[1] ? 'o' : 'i') + w[2]); if (!el) return; var val = sig[i];
+    el.classList.toggle('live', Math.abs(val) > 0.5); if ((i + (now / 16 | 0)) % 6 === 0) el.querySelector('.v').textContent = Math.abs(val) < 0.005 ? '' : val.toFixed(1) + ' V'; });
+  mods.forEach(m => {
+    if (m.model === 'SEQ3') { var steps = document.getElementById('steps-' + m.id); if (!steps) return; var cur = -1; for (var i = 0; i < 8; i++) if (v(m.id, 'o', 4 + i) > 1) cur = i;
+      Array.from(steps.children).forEach((d, i) => { d.classList.toggle('cur', i === cur); var p = m.params.find(x => x.id === 4 + i); if (p) { var f = (p.value - p.min) / (p.max - p.min || 1); d.firstChild.style.height = (8 + f * 52) + 'px'; d.lastChild.textContent = noteName(p.value); } });
+      var r = document.getElementById('running-' + m.id); if (r) r.textContent = v(m.id, 'o', 14) > 1 ? 'running' : 'stopped'; }
+    if (m.model === 'VCO') glyph(m, (ctx, w, h) => { var pitch = v(m.id, 'i', 0), fp = m.params.find(p => p.id === 2); var semis = (fp ? fp.value : 0) + pitch * 12; var f = 261.63 * Math.pow(2, semis / 12);
+      var out = m.outputs.filter(p => cables.some(c => c.outputModuleId === m.id && c.outputId === p.id)).map(p => p.name) ; var shape = out[0] || 'Saw';
+      ctx.strokeStyle = '#ffb648'; ctx.lineWidth = 3; ctx.beginPath(); var cycles = 3, ph = (now / 1000 * 2) % 1;
+      for (var x = 0; x < w; x++) { var t = (x / w * cycles + ph) % 1; var y; if (/Sine/i.test(shape)) y = Math.sin(t * 6.283); else if (/Tri/i.test(shape)) y = 1 - Math.abs(t * 4 - 2); else if (/Sq/i.test(shape)) y = t < 0.5 ? 1 : -1; else y = t * 2 - 1;
+        y = h / 2 - y * h * 0.36; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+      ctx.fillStyle = '#9a9aa3'; ctx.font = '22px system-ui'; ctx.fillText(shape + ' · ' + noteName(semis / 12) + ' · ' + f.toFixed(1) + ' Hz · pitch in ' + pitch.toFixed(2) + ' V', 16, h - 14); });
+    if (m.model === 'ADSR') glyph(m, (ctx, w, h) => { var env = v(m.id, 'o', 0), gate = v(m.id, 'i', 4) > 1; var tr = envTrace[m.id] || (envTrace[m.id] = new Float32Array(240)); tr.copyWithin(0, 1); tr[239] = env;
+      ctx.strokeStyle = '#5fb3ff'; ctx.lineWidth = 3; ctx.beginPath(); for (var i = 0; i < 240; i++) { var x = i / 239 * (w - 90), y = h - 14 - tr[i] / 10 * (h - 28); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+      ctx.fillStyle = '#2b2b31'; ctx.fillRect(w - 60, 14, 30, h - 28); ctx.fillStyle = '#5fb3ff'; var bh = env / 10 * (h - 28); ctx.fillRect(w - 60, h - 14 - bh, 30, bh);
+      ctx.fillStyle = gate ? '#f2f2f2' : '#3a3a40'; ctx.fillRect(w - 60, 2, 30, 8);
+      ctx.fillStyle = '#9a9aa3'; ctx.font = '20px system-ui'; ctx.fillText('env ' + env.toFixed(2) + ' V · gate ' + (gate ? 'on' : 'off') + ' · last 4 s', 16, 26); });
+    if (m.model === 'VCA-1') glyph(m, (ctx, w, h) => { var out = sm(m.id + 'o', Math.abs(v(m.id, 'o', 0)) / 5), cv = v(m.id, 'i', 0) / 10, lv = m.params[0] ? m.params[0].value : 1;
+      ctx.fillStyle = '#2b2b31'; ctx.fillRect(16, h / 2 - 22, w - 32, 44); ctx.fillStyle = '#ffb648'; ctx.fillRect(16, h / 2 - 22, (w - 32) * Math.min(1, out), 44);
+      ctx.fillStyle = '#5fb3ff'; ctx.fillRect(16 + (w - 32) * Math.min(1, cv * lv) - 2, h / 2 - 30, 4, 60);
+      ctx.fillStyle = '#9a9aa3'; ctx.font = '20px system-ui'; ctx.fillText('orange = output level · blue mark = envelope CV × level', 16, h - 14); });
+    if (m.model === 'HostAudio2') glyph(m, (ctx, w, h) => { [0, 1].forEach(ch => { var lv = sm(m.id + ch, Math.abs(v(m.id, 'i', ch)) / 5); var y = h / 2 - 34 + ch * 40;
+      ctx.fillStyle = '#2b2b31'; ctx.fillRect(16, y, w - 32, 28); ctx.fillStyle = lv > 0.95 ? '#fff' : '#ffb648'; ctx.fillRect(16, y, (w - 32) * Math.min(1, lv), 28); });
+      ctx.fillStyle = '#9a9aa3'; ctx.font = '20px system-ui'; ctx.fillText('to the speaker · left and right', 16, h - 12); });
+  });
+  // params from the engine every 250 ms (so bars follow changes made elsewhere)
+  if (now - lastParamPoll > 250) { lastParamPoll = now; mods.forEach(m => m.params.forEach(p => { var nv = B.getParam(m.id, p.id); if (Math.abs(nv - p.value) > 1e-6) { p.value = nv; var el = document.querySelector('.bar[data-m="' + m.id + '"][data-p="' + p.id + '"]'); if (el) { var f = (nv - p.min) / (p.max - p.min || 1); el.querySelector('.fill').style.width = (f*100) + '%'; el.querySelector('.knob').style.left = (f*100) + '%'; p.display = B.paramDisplay(m.id, p.id); el.querySelector('.val').textContent = disp(p); } } })); }
+  if (latencyTest) { var vca = mods.find(m => m.model === 'VCA-1'); if (vca && Math.abs(v(vca.id, 'o', 0)) < 0.02) { latencyTest.hits++; if (latencyTest.hits >= 2 && !latencyTest.done) { latencyTest.done = true; latencyTest.ms = now - latencyTest.t0; setTimeout(() => { B.setParam(vca.id, 0, latencyTest.restore); latencyTest = null; }, 800); } } else latencyTest.hits = 0; }
+  if ((now / 16 | 0) % 15 === 0) showStats();
+  requestAnimationFrame(frame);
+}
+function glyph(m, fn) { var c = document.getElementById('pic-' + m.id); if (!c) return; var ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); fn(ctx, c.width, c.height); }
+function sm(key, val) { var s = smooth[key] == null ? val : smooth[key] + (val - smooth[key]) * (val > smooth[key] ? 0.5 : 0.12); smooth[key] = s; return s; }
+function noteName(volts) { var n = Math.round(volts * 12) + 60; var names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return names[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1); }
+function showStats() { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var fr = stats.frames.slice().sort((a, b) => a - b); var avg = fr.reduce((a, b) => a + b, 0) / (fr.length || 1), p95 = fr[Math.floor(fr.length * 0.95)] || 0;
+  document.getElementById('stats').innerHTML = 'engine <b>' + (B.meterAvg() * 100).toFixed(1) + '%</b> avg / <b>' + (B.meterMax() * 100).toFixed(1) + '%</b> max of real time · page frame <b>' + avg.toFixed(1) + ' ms</b> avg, <b>' + p95.toFixed(1) + ' ms</b> p95 · audio <b>' + (ctx ? ctx.state : '–') + '</b> ' + (ctx ? ctx.sampleRate + ' Hz, buffer ' + (Module.WebAudioBridge.processor ? Module.WebAudioBridge.processor.bufferSize : '?') : '') + ' · C++ UI <b>' + (uiHidden ? 'hidden' : 'shown') + '</b> · ' + mods.length + ' modules, ' + watch.length + ' signals watched' + (latencyTest && latencyTest.done ? ' · <b>param→engine ' + latencyTest.ms.toFixed(0) + ' ms</b>' : (window.lastLatency ? ' · last latency ' + window.lastLatency.toFixed(0) + ' ms' : '')); }
+// ---------- wires (as in the mock)
+function drawWires() { var svg = document.getElementById('wires'); if (!svg) return; var main = document.getElementById('main'), mr = main.getBoundingClientRect();
+  var landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; svg.setAttribute('height', main.scrollHeight); svg.style.width = landscape ? main.scrollWidth + 'px' : '44px'; svg.setAttribute('width', landscape ? main.scrollWidth : 44); var html = '';
+  cables.forEach((c, k) => { var a = document.querySelector('#j-' + c.outputModuleId + '-o' + c.outputId + ' svg'), b = document.querySelector('#j-' + c.inputModuleId + '-i' + c.inputId + ' svg'); if (!a || !b) return;
+    var im = mods.find(m => m.id === c.inputModuleId), ip = im && im.inputs.find(p => p.id === c.inputId); var col = COLORS[im && ip ? portType(im, ip) : 'audio'];
+    var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    if (landscape) { var x1 = ra.left + ra.width/2 - mr.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mr.top, x2 = rb.left + rb.width/2 - mr.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mr.top, dx = Math.max(60, (x2 - x1) * 0.4), sag = 40 + k * 6;
+      html += '<path d="M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + (y1 + sag) + ', ' + (x2 - dx) + ' ' + (y2 + sag) + ', ' + x2 + ' ' + y2 + '" stroke="' + col + '" stroke-width="3" fill="none" opacity=".8"/>'; }
+    else { var y1 = ra.top + ra.height/2 - mr.top, y2 = rb.top + rb.height/2 - mr.top, x = 10 + (k % 4) * 8;
+      html += '<path d="M' + x + ' ' + y1 + ' V' + y2 + '" stroke="' + col + '" stroke-width="2.5" fill="none" opacity=".85"/><path d="M' + x + ' ' + y1 + ' H40" stroke="' + col + '" stroke-width="2.5" fill="none"/><path d="M' + x + ' ' + y2 + ' H40" stroke="' + col + '" stroke-width="2.5" fill="none"/><circle cx="' + x + '" cy="' + y1 + '" r="4" fill="' + col + '"/><circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + col + '"/>'; } });
+  svg.innerHTML = html; }
+window.addEventListener('resize', () => requestAnimationFrame(drawWires));
+// ---------- buttons
+document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio running'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
+document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };
+document.getElementById('latency').onclick = function () { if (!B || latencyTest) return; var vca = mods.find(m => m.model === 'VCA-1'); if (!vca) return; latencyTest = { t0: performance.now(), hits: 0, done: false, restore: B.getParam(vca.id, 0) }; B.setParam(vca.id, 0, 0); setTimeout(() => { if (latencyTest && latencyTest.done) window.lastLatency = latencyTest.ms; }, 900); };
+document.getElementById('reload').onclick = function () { if (!B) return; fetch('../startup.vcv').then(r => r.text()).then(t => { B.loadPatch(t); setTimeout(rebuild, 200); }); };
+</script>
+</body>
+</html>
