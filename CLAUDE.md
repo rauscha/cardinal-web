@@ -31,6 +31,10 @@ for Rack's component library, Fundamental, Bogaudio, Surge, Aria, Cardinal;
 Impromptu is ND and Audible is by permission, so leave or fully replace
 those). An abstract card or live-glyph design makes option B+ cheaper, not
 dearer. Signal types are coded by shape and label first, colour third.
+**Andrew's verdict on the mock (2026-10-15):** loves the flat cards, they
+work in both orientations, and live glyphs are the better direction for
+teaching. That is the target look for anything we draw ourselves; it does
+not by itself decide option B+ (see the spike criteria in docs/06).
 
 **Under evaluation, not decided:** replacing the C++ canvas with our own
 HTML/SVG rack view over Cardinal's headless engine (option B+,

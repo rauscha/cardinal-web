@@ -211,3 +211,17 @@ level bar, meters, all simulated at 120 bpm). Cables are drawn in the left
 margin as a transit map with the signal-type shapes. Landscape lays the
 cards side by side. Screenshots `docs/spikes/2026-10-15-mock-*.png`.
 Nothing in it is wired to Cardinal; it exists to be judged on a phone.
+
+## 9. Phone verdict (Andrew, 2026-10-15)
+
+"Love these flatter cards. Works in landscape or portrait. Glyphs is
+better for teaching." Landscape originally hid the cables; fixed the same
+day: landscape now draws Rack-style curves from each OUT jack to its IN
+jack across the cards, portrait keeps the margin transit map.
+
+What this decides: the live-glyph card is the target look for any UI we
+draw ourselves. What it does not decide: whether we draw the UI ourselves
+(option B+). Glyphs need two things the stock canvas cannot give: our own
+layout, and a readout of what each module is doing. Both are B+ work, so
+the glyph verdict raises the value of the B+ spike (docs/06) rather than
+replacing it.
