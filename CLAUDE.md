@@ -76,6 +76,17 @@ Development planning happens in a Claude cloud session in this repo.
   the stock build. The stock File menu loads plain-text `.vcv` patches.
   Plugin manifests are readable at runtime from `/resources/PluginManifests`.
 
+## Build facts (2026-10-15, see docs/08)
+- We can build Cardinal Mini for WebAssembly ourselves: `build/build-mini-wasm.sh`
+  (Cardinal's PawPaw bootstrap, pinned Emscripten 3.1.27, `make mini`).
+  One-time setup about 40 min, incremental builds about 3 to 11 min.
+- The module additions are applied by `build/cardinal-web-mini-additions.patch`
+  and verified: 66 modules, +0.4 MB wasm, +0.7 MB data.
+- `make mini` also produces `CardinalMini_dsp.wasm`, a headless engine with
+  no UI, which is the starting point for the option B+ spike.
+- In this cloud session GitHub archive downloads are blocked (git clones are
+  not); Emscripten's SDL2 port needs `EMCC_LOCAL_PORTS` pointing at a clone.
+
 ## Hosting facts (2026-10-14, see docs/04)
 - GitHub Free publishes Pages from public repos only; Pro allows private
   repos; the site is public to anyone with the URL on any personal plan.

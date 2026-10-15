@@ -24,7 +24,12 @@ plugin manifest at the commit Cardinal pins; **[PLAUSIBLE]** my estimate.
 | Addressable 8-step CV sequencer | **ADDR-SEQ** (`Bogaudio-AddrSeq`) | Bogaudio | Steps by clock or by CV address; pairs with SWITCH81 recipes. Polyphonic. | README `#addrseq` [SOLID] |
 
 Nine modules, three already-bundled plugins plus one new plugin
-(Impromptu). All are explicitly excluded from Mini today by
+(Impromptu). **Built and verified 2026-10-15** (document 08): the final
+patch also carries ADDR-SEQ X, Clocked Expander and GateSeq64 Expander
+because the parent modules reference them, plus four shared source files
+(`addressable_sequence.cpp`, `slew_common.cpp`, `output_range.cpp`,
+`PhraseSeqUtil.cpp`). Thirteen modules net; 53 to 66 in the browser; +0.4 MB
+wasm, +0.7 MB data. All are explicitly excluded from Mini today by
 `spl.removeModule(...)` lines in `plugins/plugins-mini.cpp`, which means
 upstream considered them and left them out for size, not for technical
 reasons. [SOLID]
