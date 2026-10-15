@@ -6,7 +6,7 @@
     <meta name="description" content="Cardinal Mini" />
     <meta name="theme-color" content="#111111">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=0" user-scalable="no">
-    <title>Cardinal Web (test build 0.1)</title>
+    <title>Cardinal Web (test build 0.2)</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111111">
@@ -19,6 +19,13 @@
       body, canvas {
         padding: 0;
         margin: 0;
+      }
+      body, #canvas_wrapper, canvas {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        overscroll-behavior: none;
       }
 
       #canvas_file_open {
@@ -120,10 +127,12 @@
     </div>
     <div id="start" role="dialog" aria-modal="true">
       <button id="start-btn">Tap to start audio</button>
-      <p>Test build 0: the Cardinal Mini engine with 13 added modules, no shell yet.
-         Browsers only make sound after a tap. The patch that loads plays by itself:
-         the RUN button on SEQ 3 (far left) starts and stops it, the row 1 knobs are the notes.
-         Landscape works best. Long-press a module for its menu. Source and licences:
+      <p>Test build 0.2: new touch input. Browsers only make sound after a tap. The patch
+         that loads plays by itself: RUN on SEQ 3 (far left) starts and stops it, the row 1
+         knobs are the notes.
+         <strong>Hold</strong> half a second for a module's menu, then slide to a row and lift.
+         <strong>Two fingers</strong> pan; <strong>pinch</strong> zooms. One finger on empty
+         rack still draws a selection box. Landscape works best. Source and licences:
          <a href="https://github.com/rauscha/cardinal-web" target="_blank" rel="noopener">github.com/rauscha/cardinal-web</a> (GPLv3+).</p>
     </div>
     <div id="status-strip"></div>
@@ -143,7 +152,7 @@
         if (!ctx || !el) return;
         var lat = (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
         el.textContent = 'audio ' + ctx.state + ' | ' + ctx.sampleRate + ' Hz | latency ~' + Math.round(lat * 1000) + ' ms | '
-          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0.1';
+          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0.2';
         el.style.display = 'block';
       }
       function cardinalWebAudioGate() {
