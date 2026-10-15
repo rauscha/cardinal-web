@@ -96,6 +96,10 @@ Development planning happens in a Claude cloud session in this repo.
   GitHub Actions, confirmed by Andrew 2026-10-15). Test build 0.1 loads a
   self-playing arpeggio patch (`shell/test-build-0/startup.vcv`, also the
   fork's `patches/welcome-wasm-mini.vcv`). Only the SIMD build is shipped.
+- Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
+  the one tap, engine keeps up with live knob turns, about 10 s first load
+  on slow Wi-Fi, stock menus awkward on touch. Load time and menus are the
+  open problems; the engine is proven.
 - Patch-authoring gotcha: SEQ 3 reads its saved `gates` array as integers;
   JSON booleans disable every step. Resource dirs are copied by directory
   mtime, so after replacing a file under `patches/` delete

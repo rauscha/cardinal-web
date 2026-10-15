@@ -75,3 +75,23 @@ well under 1 MB. Size was never going to be the constraint on Mini.
    readout) can now be written and tested in the same loop: edit, build,
    headless test.
 3. The headless engine wasm for the option B+ spike already exists.
+
+## First real-device result (Andrew, 2026-10-15)
+
+Test build 0.1 on Andrew's phone, hospital Wi-Fi, no MIDI hardware:
+
+- Install from the browser was easy. First load took about 10 s on slow
+  Wi-Fi (about 5.6 MB gzipped wasm plus data and JS, then compile). No
+  service worker yet, so every load is a network load.
+- Sound works. Audio starts as soon as the single "Tap to start audio"
+  button is pressed; nothing else was needed.
+- The engine keeps up while knobs are spun: fully live response, no
+  dropouts reported. This is the single most important fact for option A:
+  a phone runs the Mini engine plus the C++ UI at usable quality.
+- The stock menus "kinda work but not great" on touch. This is the known
+  option A weakness: 2 s long-press to open, mouse-sized rows, no touch
+  scrolling in long menus. The shell's own sheets (module browser, module
+  help, patch library) are the planned replacement for most menu use.
+
+What this changes: load time and menus are now the two measured problems,
+and both are shell work, not engine work. The engine question is answered.
