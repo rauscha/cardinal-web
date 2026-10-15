@@ -25,6 +25,13 @@ recommendation (fix the backend first) and the triggers for abandoning the
 canvas are in `docs/09-touch-input-findings.md`. Hexen's two-zoom-mode
 model is summarised there as a reference, not a template.
 
+**Visual direction (brainstorm 2026-10-15, docs/11):** the modules need
+not stay skeuomorphic. On option A only an SVG reskin is possible (legal
+for Rack's component library, Fundamental, Bogaudio, Surge, Aria, Cardinal;
+Impromptu is ND and Audible is by permission, so leave or fully replace
+those). An abstract card or live-glyph design makes option B+ cheaper, not
+dearer. Signal types are coded by shape and label first, colour third.
+
 **Under evaluation, not decided:** replacing the C++ canvas with our own
 HTML/SVG rack view over Cardinal's headless engine (option B+,
 `docs/06-engine-ui-split-option.md`). Licence permits it; the cost is
