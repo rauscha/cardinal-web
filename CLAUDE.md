@@ -92,9 +92,14 @@ Development planning happens in a Claude cloud session in this repo.
   plus additions and a minimal shell (`shell/test-build-0/` on this branch
   is the same shell without binaries). `.github/workflows/pages.yml` deploys
   `site/` with actions/deploy-pages on push to `pages` or by manual run.
-- Goes live at https://andrewrausch.com/cardinal-web/ once Andrew makes the
-  repo public and sets Pages source to "GitHub Actions". Only the SIMD build
-  is shipped; browsers without wasm SIMD get a 404 for the nosimd fallback.
+- Live at https://andrewrausch.com/cardinal-web/ (repo public, Pages on
+  GitHub Actions, confirmed by Andrew 2026-10-15). Test build 0.1 loads a
+  self-playing arpeggio patch (`shell/test-build-0/startup.vcv`, also the
+  fork's `patches/welcome-wasm-mini.vcv`). Only the SIMD build is shipped.
+- Patch-authoring gotcha: SEQ 3 reads its saved `gates` array as integers;
+  JSON booleans disable every step. Resource dirs are copied by directory
+  mtime, so after replacing a file under `patches/` delete
+  `bin/CardinalMini.lv2/resources/patches` and the `.data` before `make mini`.
 
 ## Hosting facts (2026-10-14, see docs/04)
 - GitHub Free publishes Pages from public repos only; Pro allows private
