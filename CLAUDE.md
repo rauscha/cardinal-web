@@ -44,8 +44,9 @@ readout, plus add/remove cable. `shell/spike-b/` builds glyph cards for
 every module from that metadata and is live at `/spike-b/`; cables are
 patched by touch (press a jack, drag or lift-scroll-tap the other end;
 connected inputs offer Disconnect; cards never move). Engine CPU about
-4 % either way; param-to-engine 38 ms. Not yet built: add/remove modules
-from the page, undo, saving, custom displays, audio-rate readout. The stock canvas stays as
+4 % either way; param-to-engine 38 ms. Undo/redo use Rack's history
+(cables and parameter gestures). Not yet built: add/remove modules from
+the page, saving, custom displays, audio-rate readout. The stock canvas stays as
 the fallback view in the same build. `CardinalMini_dsp.wasm` is the LV2
 plugin binary, not a runnable headless engine (docs/08 was wrong).
 
@@ -138,7 +139,7 @@ Development planning happens in a Claude cloud session in this repo.
   mock at `/mock/` (`shell/mock/index.html`, docs/11 §8); Andrew: loves the
   cards, glyphs better for teaching. Test build 0.4 (2026-10-15) adds the
   engine bridge and the live glyph spike at `/spike-b/` (docs/12); 0.5
-  adds cables by touch there (docs/12 §6).
+  adds cables by touch there (docs/12 §6); 0.6 adds undo/redo (§7).
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,

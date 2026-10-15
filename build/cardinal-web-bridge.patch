@@ -1,8 +1,8 @@
 diff --git a/src/CardinalUI.cpp b/src/CardinalUI.cpp
-index 278e36a..074ff48 100644
+index 278e36a..2c05932 100644
 --- a/src/CardinalUI.cpp
 +++ b/src/CardinalUI.cpp
-@@ -17,6 +17,9 @@
+@@ -17,10 +17,14 @@
  
  #include <app/MenuBar.hpp>
  #include <app/Scene.hpp>
@@ -12,7 +12,12 @@ index 278e36a..074ff48 100644
  #include <asset.hpp>
  #include <context.hpp>
  #include <engine/Engine.hpp>
-@@ -290,6 +293,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
+ #include <helpers.hpp>
++#include <history.hpp>
+ #include <patch.hpp>
+ #include <settings.hpp>
+ #include <string.hpp>
+@@ -290,6 +294,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -26,7 +31,7 @@ index 278e36a..074ff48 100644
  class CardinalUI : public CardinalBaseUI,
                     public WindowParametersCallback
  {
-@@ -490,10 +500,16 @@ public:
+@@ -490,10 +501,16 @@ public:
          rack::contextSet(nullptr);
  
          WindowParametersSetCallback(context->window, this);
@@ -43,7 +48,7 @@ index 278e36a..074ff48 100644
          rack::contextSet(context);
  
          context->nativeWindowId = 0;
-@@ -531,12 +547,20 @@ public:
+@@ -531,12 +548,20 @@ public:
  
      void onNanoDisplay() override
      {
@@ -64,7 +69,7 @@ index 278e36a..074ff48 100644
         #ifdef DPF_RUNTIME_TESTING
          if (inSelfTest)
          {
-@@ -1276,4 +1300,325 @@ UI* createUI()
+@@ -1276,4 +1301,377 @@ UI* createUI()
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -354,7 +359,15 @@ index 278e36a..074ff48 100644
 +    cw->color = c->scene->rack->getNextCableColor();
 +    cw->updateCable();
 +    c->scene->rack->addCable(cw);
-+    return cw->getCable() != nullptr ? double(cw->getCable()->id) : -1;
++    if (cw->getCable() != nullptr)
++    {
++        rack::history::CableAdd* const h = new rack::history::CableAdd;
++        h->name = "connect cable";
++        h->setCable(cw);
++        c->history->push(h);
++        return double(cw->getCable()->id);
++    }
++    return -1;
 +}
 +
 +EMSCRIPTEN_KEEPALIVE int cardinalweb_remove_cable(const double cableId)
@@ -364,8 +377,52 @@ index 278e36a..074ff48 100644
 +    const cardinalweb::Ctx sc(c);
 +    rack::app::CableWidget* const cw = c->scene->rack->getCable(int64_t(cableId));
 +    if (cw == nullptr) return 0;
++    rack::history::CableRemove* const h = new rack::history::CableRemove;
++    h->name = "disconnect cable";
++    h->setCable(cw);
++    c->history->push(h);
 +    c->scene->rack->removeCable(cw);
 +    delete cw;
++    return 1;
++}
++
++// Record a finished parameter gesture so it can be undone (the value itself was set live with set_param).
++EMSCRIPTEN_KEEPALIVE void cardinalweb_param_commit(const double moduleId, const int paramId, const float oldValue, const float newValue)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr || oldValue == newValue) return;
++    rack::engine::Module* const m = c->engine->getModule(int64_t(moduleId));
++    if (m == nullptr || paramId < 0 || paramId >= int(m->paramQuantities.size())) return;
++    const cardinalweb::Ctx sc(c);
++    rack::history::ParamChange* const h = new rack::history::ParamChange;
++    h->name = "change parameter";
++    h->moduleId = int64_t(moduleId);
++    h->paramId = paramId;
++    h->oldValue = oldValue;
++    h->newValue = newValue;
++    c->history->push(h);
++}
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_can_undo() { CardinalPluginContext* const c = cardinalweb::ctx(); return c != nullptr && c->history->canUndo() ? 1 : 0; }
++EMSCRIPTEN_KEEPALIVE int cardinalweb_can_redo() { CardinalPluginContext* const c = cardinalweb::ctx(); return c != nullptr && c->history->canRedo() ? 1 : 0; }
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_undo_name() { CardinalPluginContext* const c = cardinalweb::ctx(); if (c == nullptr || !c->history->canUndo()) return ""; cardinalweb::gResult = c->history->getUndoName(); return cardinalweb::gResult.c_str(); }
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_redo_name() { CardinalPluginContext* const c = cardinalweb::ctx(); if (c == nullptr || !c->history->canRedo()) return ""; cardinalweb::gResult = c->history->getRedoName(); return cardinalweb::gResult.c_str(); }
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_undo()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr || !c->history->canUndo()) return 0;
++    const cardinalweb::Ctx sc(c);
++    try { c->history->undo(); } catch (const rack::Exception& e) { d_stderr("cardinalweb_undo: %s", e.what()); return 0; }
++    return 1;
++}
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_redo()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr || !c->history->canRedo()) return 0;
++    const cardinalweb::Ctx sc(c);
++    try { c->history->redo(); } catch (const rack::Exception& e) { d_stderr("cardinalweb_redo: %s", e.what()); return 0; }
 +    return 1;
 +}
 +

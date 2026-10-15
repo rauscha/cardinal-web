@@ -153,3 +153,23 @@ already in use is cleared first, since Rack allows one cable per input.
 
 Not done: undo history for cable edits (Rack's `history::CableAdd` is
 easy to add), module add and remove, saving the patch from this UI.
+
+## 7. Undo and redo (test build 0.6)
+
+Rack's own history stack does the work. The bridge now pushes
+`history::CableAdd` on connect, `history::CableRemove` on disconnect, and
+a `history::ParamChange` when a bar gesture ends (the page remembers the
+value at touch-down and commits old and new on release, so a drag is one
+undo step, not hundreds). Exposed: `cardinalweb_undo`, `cardinalweb_redo`,
+`can_undo`, `can_redo`, `undo_name`, `redo_name`. The page shows the action
+name on the buttons ("Undo connect cable", "Redo change parameter") and
+also takes Ctrl+Z and Ctrl+Shift+Z with a keyboard attached.
+
+Verified headlessly (`docs/spikes/2026-10-15-undo-log.txt`): connect →
+undo → redo moves the cable count 6, 7, 6, 7 with the right button labels;
+disconnect then undo restores the cable; a tempo change 2.0 → 3.4 undoes
+to 2.0 and the bar follows; redo and undo from the keyboard work; audio
+keeps running. Because the actions are Rack's, the stock canvas (the
+fallback view) shares the same undo stack.
+
+Not done: module add and remove, saving.
