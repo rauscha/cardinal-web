@@ -70,6 +70,11 @@ Development planning happens in a Claude cloud session in this repo.
   offering source.
 - `Module.WebAudioBridge.audioContext` is reachable from page scripts, so
   WAV recording can be done in the shell without touching Cardinal.
+- Spikes 2026-10-15 (docs/07): synthetic TouchEvent and WheelEvent from
+  page JS drive the canvas after one real tap; synthetic MouseEvents die
+  once a touch has been seen. Long-press (2 s) is already a right-click in
+  the stock build. The stock File menu loads plain-text `.vcv` patches.
+  Plugin manifests are readable at runtime from `/resources/PluginManifests`.
 
 ## Hosting facts (2026-10-14, see docs/04)
 - GitHub Free publishes Pages from public repos only; Pro allows private

@@ -32,21 +32,20 @@ screen in this brief is either the canvas with a thin frame, or a surface
 that slides over the canvas and slides away again. Nothing in the shell may
 permanently shrink the canvas.
 
-Three capabilities would change the design and each needs a spike before
-visual work (document 02 section 7 lists them):
+Three capabilities would change the design. Spikes ran on 2026-10-15
+(document 07); status after them:
 
-- **[OPEN] Loading a patch programmatically.** Lessons depend on it. Either
-  the one-line fork change that enables `?patch=` in Mini, or writing the
-  file into the virtual filesystem and triggering open.
+- **[RESOLVED, with a caveat] Loading a patch programmatically.** The
+  stock build loads a `.vcv` through its File menu and file input, proven
+  in the spike. A fork bridge function is the robust form and is planned.
 - **[OPEN] Knowing which module was tapped.** Without it the help drawer is
   a searchable module list, not a context panel. A small C++ hook that posts
   a message on module selection would upgrade it. Design for the list; leave
   room for the upgrade.
-- **[OPEN] Gesture translation.** A transparent layer over the canvas could
-  turn long-press into a right-click, pinch into zoom and two-finger drag
-  into pan by dispatching the mouse and wheel events Cardinal already
-  understands. If this works there is no C++ touch work at all. If it does
-  not, the touch improvements go into the fork.
+- **[RESOLVED] Gesture translation.** Synthetic touch and wheel events
+  from page scripts drive the canvas once the user has tapped once. Long
+  press to context menu and ctrl-wheel zoom are proven; two-finger pan is
+  the one gesture still untested. No C++ touch work is required.
 
 ## 3. Orientation [DECISION]
 
@@ -148,7 +147,7 @@ Audio interruptions (phone call, Bluetooth switch, backgrounding) show one
 sheet: "Audio stopped. Tap to resume." If resume fails twice, the sheet
 says "Restarting audio engine" and does so. Rules in document 02 section 1.
 
-## 6. Gestures on the canvas [OPEN until the spike]
+## 6. Gestures on the canvas [mostly proven, see document 07]
 
 | Gesture | Today | Intended |
 |---|---|---|
