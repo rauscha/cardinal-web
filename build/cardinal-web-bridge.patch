@@ -1,8 +1,18 @@
 diff --git a/src/CardinalUI.cpp b/src/CardinalUI.cpp
-index 278e36a..4daaebc 100644
+index 278e36a..074ff48 100644
 --- a/src/CardinalUI.cpp
 +++ b/src/CardinalUI.cpp
-@@ -290,6 +290,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
+@@ -17,6 +17,9 @@
+ 
+ #include <app/MenuBar.hpp>
+ #include <app/Scene.hpp>
++#include <app/CableWidget.hpp>
++#include <app/PortWidget.hpp>
++#include <app/RackWidget.hpp>
+ #include <asset.hpp>
+ #include <context.hpp>
+ #include <engine/Engine.hpp>
+@@ -290,6 +293,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -16,7 +26,7 @@ index 278e36a..4daaebc 100644
  class CardinalUI : public CardinalBaseUI,
                     public WindowParametersCallback
  {
-@@ -490,10 +497,16 @@ public:
+@@ -490,10 +500,16 @@ public:
          rack::contextSet(nullptr);
  
          WindowParametersSetCallback(context->window, this);
@@ -33,7 +43,7 @@ index 278e36a..4daaebc 100644
          rack::contextSet(context);
  
          context->nativeWindowId = 0;
-@@ -531,12 +544,20 @@ public:
+@@ -531,12 +547,20 @@ public:
  
      void onNanoDisplay() override
      {
@@ -54,7 +64,7 @@ index 278e36a..4daaebc 100644
         #ifdef DPF_RUNTIME_TESTING
          if (inSelfTest)
          {
-@@ -1276,4 +1297,290 @@ UI* createUI()
+@@ -1276,4 +1300,325 @@ UI* createUI()
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -322,6 +332,41 @@ index 278e36a..4daaebc 100644
 +        out[i] = v;
 +    }
 +    return n;
++}
++
++// Connect an output to an input the way the stock UI does (a CableWidget owning an engine Cable).
++// An input already in use is cleared first. Returns the new cable id, or -1.
++EMSCRIPTEN_KEEPALIVE double cardinalweb_add_cable(const double outModuleId, const int outPortId, const double inModuleId, const int inPortId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return -1;
++    const cardinalweb::Ctx sc(c);
++    rack::app::ModuleWidget* const outMw = c->scene->rack->getModule(int64_t(outModuleId));
++    rack::app::ModuleWidget* const inMw = c->scene->rack->getModule(int64_t(inModuleId));
++    if (outMw == nullptr || inMw == nullptr) return -1;
++    rack::app::PortWidget* const outPw = outMw->getOutput(outPortId);
++    rack::app::PortWidget* const inPw = inMw->getInput(inPortId);
++    if (outPw == nullptr || inPw == nullptr) return -1;
++    c->scene->rack->clearCablesOnPort(inPw);
++    rack::app::CableWidget* const cw = new rack::app::CableWidget;
++    cw->outputPort = outPw;
++    cw->inputPort = inPw;
++    cw->color = c->scene->rack->getNextCableColor();
++    cw->updateCable();
++    c->scene->rack->addCable(cw);
++    return cw->getCable() != nullptr ? double(cw->getCable()->id) : -1;
++}
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_remove_cable(const double cableId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return 0;
++    const cardinalweb::Ctx sc(c);
++    rack::app::CableWidget* const cw = c->scene->rack->getCable(int64_t(cableId));
++    if (cw == nullptr) return 0;
++    c->scene->rack->removeCable(cw);
++    delete cw;
++    return 1;
 +}
 +
 +EMSCRIPTEN_KEEPALIVE void cardinalweb_set_cpu_meter(const int enabled)

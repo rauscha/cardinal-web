@@ -111,3 +111,45 @@ rate, whether the live cards teach what he hoped); then `add_cable` and
 touch patching in the card UI, because connecting is the act he said the
 cards make logical; then the help drawer bound to the same metadata
 (descriptions are already in the JSON).
+
+## 6. Cables by touch (added the same day, test build 0.5)
+
+Andrew asked for press OUT, drag to IN, and raised the problem of cards
+that live far apart (swapping cards side by side would break the mental
+layout). Decision: never move cards; make the gesture work at any distance.
+
+**Bridge additions.** `cardinalweb_add_cable(outModule, outPort, inModule,
+inPort)` creates the cable exactly as the stock UI does (a `CableWidget`
+that owns the engine `Cable`, next cable colour from Rack's own cycle), so
+it also appears in the fallback canvas and saves with the patch; an input
+already in use is cleared first, since Rack allows one cable per input.
+`cardinalweb_remove_cable(id)` removes through the same widget.
+
+**Interaction (one armed state, three ways to finish it):**
+
+1. **Press a jack** (OUT or IN): it arms, every jack of the other kind
+   becomes a target, targets of the same signal shape light brighter, a
+   chip at the bottom names the jack and says what to do.
+2. **Drag**: a ghost cable follows the finger; near the top (below the
+   sticky header) or bottom edge the page auto-scrolls; releasing on a
+   target connects. Releasing on nothing keeps the jack armed.
+3. **Lift, scroll, tap**: with a jack armed, tap any target anywhere to
+   connect. Tap the armed jack or the background to cancel.
+4. **Connected input**: tapping it (nothing armed) arms it for re-routing
+   and offers Disconnect in the chip. Tapping an OUT then moves the cable.
+
+**Verified headlessly** (`docs/spikes/2026-10-15-cables-log.txt`):
+
+| Step | Result |
+|---|---|
+| Arm SEQ 3 CV 2 | 19 targets, 8 with the matching shape, chip shown |
+| Scroll to VCO, tap FM input | 7 cables, new one SEQ 3 CV 2 → VCO FM |
+| Tap the connected FM input | chip names the source and offers Disconnect; Disconnect → 6 cables |
+| Mouse drag Clock OUT → Reset IN inside one card | 7 cables, correct ends |
+| Drag to the bottom edge and hold | page scrolled 50 → 624 px; lifting on nothing kept the jack armed |
+| Arm SEQ 3 CV 2, tap VCA CV (occupied by ADSR) | replaced: ADSR → VCA gone, SEQ 3 → VCA present, count unchanged |
+| Tap background while armed | disarmed |
+| Audio throughout | running, engine about 4 % |
+
+Not done: undo history for cable edits (Rack's `history::CableAdd` is
+easy to add), module add and remove, saving the patch from this UI.

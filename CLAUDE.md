@@ -40,10 +40,12 @@ not by itself decide option B+ (see the spike criteria in docs/06).
 hybrid:** the same web build carries a C API (`build/cardinal-web-bridge.patch`,
 exported from the fork's UI file) that hides the C++ UI at runtime and
 exposes patch load/save, module metadata, params and per-frame signal
-readout. `shell/spike-b/` builds glyph cards for every module from that
-metadata and is live at `/spike-b/`. Engine CPU about 4 % either way;
-param-to-engine 38 ms. Not yet built: add/remove cables and modules from
-the page, custom displays, audio-rate readout. The stock canvas stays as
+readout, plus add/remove cable. `shell/spike-b/` builds glyph cards for
+every module from that metadata and is live at `/spike-b/`; cables are
+patched by touch (press a jack, drag or lift-scroll-tap the other end;
+connected inputs offer Disconnect; cards never move). Engine CPU about
+4 % either way; param-to-engine 38 ms. Not yet built: add/remove modules
+from the page, undo, saving, custom displays, audio-rate readout. The stock canvas stays as
 the fallback view in the same build. `CardinalMini_dsp.wasm` is the LV2
 plugin binary, not a runnable headless engine (docs/08 was wrong).
 
@@ -135,7 +137,8 @@ Development planning happens in a Claude cloud session in this repo.
   shape-coded jacks (`build/cardinal-web-port-shapes.patch`) and the design
   mock at `/mock/` (`shell/mock/index.html`, docs/11 §8); Andrew: loves the
   cards, glyphs better for teaching. Test build 0.4 (2026-10-15) adds the
-  engine bridge and the live glyph spike at `/spike-b/` (docs/12).
+  engine bridge and the live glyph spike at `/spike-b/` (docs/12); 0.5
+  adds cables by touch there (docs/12 §6).
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,
