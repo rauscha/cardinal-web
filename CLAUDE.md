@@ -91,6 +91,10 @@ Development planning happens in a Claude cloud session in this repo.
   One-time setup about 40 min, incremental builds about 3 to 11 min.
 - The module additions are applied by `build/cardinal-web-mini-additions.patch`
   and verified: 66 modules, +0.4 MB wasm, +0.7 MB data.
+- `build/cardinal-web-touch-backend.patch` (applied inside `dpf/`) replaces
+  the pugl web touch emulation: 450 ms long-press with 10 px slop, right
+  press+release so menus get hover, slide-and-lift selects, two-finger pan,
+  pinch zoom. Verified headlessly, docs/10. Tunables are `#define`s.
 - `make mini` also produces `CardinalMini_dsp.wasm`, a headless engine with
   no UI, which is the starting point for the option B+ spike.
 - In this cloud session GitHub archive downloads are blocked (git clones are
@@ -105,6 +109,8 @@ Development planning happens in a Claude cloud session in this repo.
   GitHub Actions, confirmed by Andrew 2026-10-15). Test build 0.1 loads a
   self-playing arpeggio patch (`shell/test-build-0/startup.vcv`, also the
   fork's `patches/welcome-wasm-mini.vcv`). Only the SIMD build is shipped.
+  Test build 0.2 (2026-10-15) adds the touch backend (docs/10); awaiting
+  Andrew's phone verdict.
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,

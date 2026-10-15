@@ -1,0 +1,469 @@
+diff --git a/dgl/src/pugl-extra/wasm.c b/dgl/src/pugl-extra/wasm.c
+index c4a885a..bee95fc 100644
+--- a/dgl/src/pugl-extra/wasm.c
++++ b/dgl/src/pugl-extra/wasm.c
+@@ -7,6 +7,7 @@
+ #include "../pugl-upstream/src/internal.h"
+ #include "../pugl-upstream/src/platform.h"
+ 
++#include <math.h>
+ #include <stdio.h>
+ 
+ #include <emscripten/html5.h>
+@@ -59,6 +60,8 @@ puglInitViewInternals(PuglWorld* const world)
+   PuglInternals* impl = (PuglInternals*)calloc(1, sizeof(PuglInternals));
+ 
+   impl->buttonPressTimeout = -1;
++  impl->touchState = 0;
++  impl->touchPrimaryId = -1;
+   impl->supportsTouch = PUGL_DONT_CARE; // not yet known
+ 
+ #ifdef PUGL_WASM_ASYNC_CLIPBOARD
+@@ -445,27 +448,134 @@ puglMouseCallback(const int eventType, const EmscriptenMouseEvent* const mouseEv
+   return EM_FALSE;
+ }
+ 
++// ---------------------------------------------------------------------------
++// Touch input (cardinal-web). Replaces the stock single-pointer emulation.
++//
++//  one finger:  tap            -> left click at the touch origin
++//               move > slop    -> left press at origin, then drag
++//               hold 450 ms    -> right click (press + release) at origin,
++//                                 then the finger hovers the opened menu;
++//                                 lift after sliding -> left click where lifted
++//  two fingers: midpoint move  -> scroll (Rack pans)
++//               distance ratio -> ctrl-scroll (Rack zooms at the midpoint)
++// ---------------------------------------------------------------------------
++
++#define PUGL_TOUCH_LONGPRESS_MS 450
++#define PUGL_TOUCH_SLOP_PX      10.0
++#define PUGL_TOUCH_PAN_DIV      50.0   // Cardinal multiplies scroll deltas by 50
++#define PUGL_TOUCH_ZOOM_MULT    4.0    // Rack: zoom *= 2^(scrollDelta.y / 50 / 4)
++
++enum PuglTouchState {
++  PUGL_TOUCH_NONE = 0,
++  PUGL_TOUCH_PENDING,   // one finger down, inside slop, long-press timer running
++  PUGL_TOUCH_DRAGGING,  // left button is down
++  PUGL_TOUCH_MENU,      // right click was delivered, finger still down
++  PUGL_TOUCH_MULTI,     // two fingers: pan / zoom gesture
++  PUGL_TOUCH_DONE       // gesture over, waiting for all fingers to lift
++};
++
++typedef struct {
++  int    id;
++  double x, y; // canvas CSS pixels
++} PuglTouchPoint;
++
++static void
++puglTouchSendButton(PuglView* const view, const int button, const bool press,
++                    const double x, const double y, const double time, const PuglMods state)
++{
++  const double sf = view->world->impl->scaleFactor;
++  PuglEvent event = {{press ? PUGL_BUTTON_PRESS : PUGL_BUTTON_RELEASE, 0}};
++  event.button.time   = time;
++  event.button.button = button;
++  event.button.x      = x * sf;
++  event.button.y      = y * sf;
++  event.button.xRoot  = x * sf;
++  event.button.yRoot  = y * sf;
++  event.button.state  = state;
++  puglDispatchEventWithContext(view, &event);
++}
++
++static void
++puglTouchSendMotion(PuglView* const view, const double x, const double y,
++                    const double time, const PuglMods state)
++{
++  const double sf = view->world->impl->scaleFactor;
++  PuglEvent event = {{PUGL_MOTION, 0}};
++  event.motion.time  = time;
++  event.motion.x     = x * sf;
++  event.motion.y     = y * sf;
++  event.motion.xRoot = x * sf;
++  event.motion.yRoot = y * sf;
++  event.motion.state = state;
++  puglDispatchEventWithContext(view, &event);
++}
++
++static void
++puglTouchSendScroll(PuglView* const view, const double x, const double y,
++                    const double dx, const double dy, const bool ctrl, const double time)
++{
++  const double sf = view->world->impl->scaleFactor;
++  PuglEvent event = {{PUGL_SCROLL, 0}};
++  event.scroll.time      = time;
++  event.scroll.x         = x * sf;
++  event.scroll.y         = y * sf;
++  event.scroll.xRoot     = x * sf;
++  event.scroll.yRoot     = y * sf;
++  event.scroll.state     = ctrl ? PUGL_MOD_CTRL : 0;
++  event.scroll.direction = PUGL_SCROLL_SMOOTH;
++  event.scroll.dx        = dx;
++  event.scroll.dy        = dy;
++  puglDispatchEventWithContext(view, &event);
++}
++
++static void
++puglTouchClearTimer(PuglInternals* const impl)
++{
++  if (impl->buttonPressTimeout != -1) {
++    emscripten_clear_timeout(impl->buttonPressTimeout);
++    impl->buttonPressTimeout = -1;
++  }
++}
++
+ static void
+-puglTouchStartDelay(void* const userData)
++puglTouchLongPress(void* const userData)
+ {
+   PuglView*      const view = (PuglView*)userData;
+-  PuglInternals* const impl  = view->impl;
++  PuglInternals* const impl = view->impl;
+ 
+   impl->buttonPressTimeout = -1;
+-  impl->nextButtonEvent.button.time += 2000;
+-  puglDispatchEventWithContext(view, &impl->nextButtonEvent);
++
++  if (impl->touchState != PUGL_TOUCH_PENDING)
++    return;
++
++  impl->touchState     = PUGL_TOUCH_MENU;
++  impl->touchMenuMoved = false;
++
++  const double time = impl->touchStartTime + PUGL_TOUCH_LONGPRESS_MS / 1e3;
++  puglTouchSendButton(view, 1, true,  impl->touchOriginX, impl->touchOriginY, time, 0);
++  puglTouchSendButton(view, 1, false, impl->touchOriginX, impl->touchOriginY, time, 0);
++
++  EM_ASM({
++    try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) {}
++  });
++}
++
++static void
++puglTouchInitMulti(PuglInternals* const impl, const PuglTouchPoint* const a, const PuglTouchPoint* const b)
++{
++  impl->touchMidX = (a->x + b->x) * 0.5;
++  impl->touchMidY = (a->y + b->y) * 0.5;
++  const double ddx = a->x - b->x;
++  const double ddy = a->y - b->y;
++  impl->touchDist = sqrt(ddx * ddx + ddy * ddy);
+ }
+ 
+ static EM_BOOL
+ puglTouchCallback(const int eventType, const EmscriptenTouchEvent* const touchEvent, void* const userData)
+ {
+-  if (touchEvent->numTouches <= 0) {
+-    return EM_FALSE;
+-  }
+-
+-  PuglView*      const view   = (PuglView*)userData;
+-  PuglInternals* const impl   = view->impl;
+-  const char* const className = view->world->strings[PUGL_CLASS_NAME];
++  PuglView*      const view      = (PuglView*)userData;
++  PuglInternals* const impl      = view->impl;
++  const char* const    className = view->world->strings[PUGL_CLASS_NAME];
+ 
+   if (impl->supportsTouch == PUGL_DONT_CARE) {
+     impl->supportsTouch = PUGL_TRUE;
+@@ -475,108 +585,198 @@ puglTouchCallback(const int eventType, const EmscriptenTouchEvent* const touchEv
+     emscripten_set_mouseup_callback(className, view, false, NULL);
+   }
+ 
+-  if (!view->impl->visible) {
++  if (!impl->visible) {
+     return EM_FALSE;
+   }
+ 
+-  PuglEvent event = {{PUGL_NOTHING, 0}};
++  const double   time   = touchEvent->timestamp / 1e3;
++  const PuglMods state  = translateModifiers(touchEvent->ctrlKey,
++                                             touchEvent->shiftKey,
++                                             touchEvent->altKey,
++                                             touchEvent->metaKey);
++  const bool     ending = eventType == EMSCRIPTEN_EVENT_TOUCHEND || eventType == EMSCRIPTEN_EVENT_TOUCHCANCEL;
++  const bool     cancel = eventType == EMSCRIPTEN_EVENT_TOUCHCANCEL;
++
++  double rectX = 0.0, rectY = 0.0;
++#ifndef __MOD_DEVICES__
++  rectX = EM_ASM_DOUBLE({
++    var canvasWrapper = document.getElementById(UTF8ToString($0)).parentElement;
++    return canvasWrapper.getBoundingClientRect().x;
++  }, className);
++  rectY = EM_ASM_DOUBLE({
++    var canvasWrapper = document.getElementById(UTF8ToString($0)).parentElement;
++    return canvasWrapper.getBoundingClientRect().y;
++  }, className);
++#endif
+ 
+-  const double   time  = touchEvent->timestamp / 1e3;
+-  const PuglMods state = translateModifiers(touchEvent->ctrlKey,
+-                                            touchEvent->shiftKey,
+-                                            touchEvent->altKey,
+-                                            touchEvent->metaKey);
++  // Fingers still on the screen after this event, and the primary finger's position.
++  PuglTouchPoint active[4];
++  int  numActive      = 0;
++  bool primaryActive  = false;
++  double px = impl->touchLastX, py = impl->touchLastY;
++  int  firstChanged = -1;
+ 
+-  double scaleFactor = view->world->impl->scaleFactor;
++  for (int i = 0; i < touchEvent->numTouches && i < 32; ++i) {
++    const EmscriptenTouchPoint* const p = &touchEvent->touches[i];
+ #ifdef __MOD_DEVICES__
+-  if (!view->impl->isFullscreen) {
+-    scaleFactor /= EM_ASM_DOUBLE({
+-      return parseFloat(
+-        RegExp('^scale\\\((.*)\\\)$')
+-        .exec(document.getElementById("pedalboard-dashboard").style.transform)[1]
+-      );
+-    }) * MOD_SCALE_FACTOR_MULT;
+-  }
++    const double x = p->canvasX, y = p->canvasY;
++#else
++    const double x = p->clientX - rectX, y = p->clientY - rectY;
+ #endif
+-
+-  d_debug("touch %d|%s %d || %ld",
+-          eventType,
+-          eventType == EMSCRIPTEN_EVENT_TOUCHSTART ? "start" :
+-          eventType == EMSCRIPTEN_EVENT_TOUCHEND ? "end" : "cancel",
+-          touchEvent->numTouches,
+-          impl->buttonPressTimeout);
+-
+-  const EmscriptenTouchPoint* point = &touchEvent->touches[0];
+-
+-  if (impl->buttonPressTimeout != -1 || eventType == EMSCRIPTEN_EVENT_TOUCHCANCEL) {
+-    // if we received an event while touch is active, trigger initial click now
+-    if (impl->buttonPressTimeout != -1) {
+-      emscripten_clear_timeout(impl->buttonPressTimeout);
+-      impl->buttonPressTimeout = -1;
+-      if (eventType != EMSCRIPTEN_EVENT_TOUCHCANCEL) {
+-        impl->nextButtonEvent.button.button = 0;
+-      }
++    if (p->identifier == impl->touchPrimaryId && impl->touchState != PUGL_TOUCH_NONE) {
++      px = x; py = y;
++    }
++    if (p->isChanged && firstChanged < 0)
++      firstChanged = i;
++    if (ending && p->isChanged)
++      continue;
++    if (p->identifier == impl->touchPrimaryId && impl->touchState != PUGL_TOUCH_NONE)
++      primaryActive = true;
++    if (numActive < 4) {
++      active[numActive].id = p->identifier;
++      active[numActive].x  = x;
++      active[numActive].y  = y;
++      ++numActive;
+     }
+-    impl->nextButtonEvent.button.time = time;
+-    puglDispatchEventWithContext(view, &impl->nextButtonEvent);
+   }
+ 
++  switch (eventType) {
++  case EMSCRIPTEN_EVENT_TOUCHSTART:
++    if (impl->touchState == PUGL_TOUCH_NONE && numActive >= 1) {
++      const EmscriptenTouchPoint* const p = &touchEvent->touches[firstChanged >= 0 ? firstChanged : 0];
+ #ifdef __MOD_DEVICES__
+-  const long canvasX = point->canvasX;
+-  const long canvasY = point->canvasY;
++      const double x = p->canvasX, y = p->canvasY;
+ #else
+-  const double canvasX = point->clientX - EM_ASM_DOUBLE({
+-    var canvasWrapper = document.getElementById(UTF8ToString($0)).parentElement;
+-    return canvasWrapper.getBoundingClientRect().x;
+-  }, className);
+-  const double canvasY = point->clientY - EM_ASM_DOUBLE({
+-    var canvasWrapper = document.getElementById(UTF8ToString($0)).parentElement;
+-    return canvasWrapper.getBoundingClientRect().y;
+-  }, className);
++      const double x = p->clientX - rectX, y = p->clientY - rectY;
+ #endif
+-
+-  switch (eventType) {
+-  case EMSCRIPTEN_EVENT_TOUCHEND:
+-  case EMSCRIPTEN_EVENT_TOUCHCANCEL:
+-    event.button.type   = PUGL_BUTTON_RELEASE;
+-    event.button.time   = time;
+-    event.button.button = eventType == EMSCRIPTEN_EVENT_TOUCHCANCEL ? 1 : 0;
+-    event.button.x      = canvasX * scaleFactor;
+-    event.button.y      = canvasY * scaleFactor;
+-    event.button.xRoot  = point->screenX * scaleFactor;
+-    event.button.yRoot  = point->screenY * scaleFactor;
+-    event.button.state  = state;
++      impl->touchPrimaryId = p->identifier;
++      impl->touchOriginX = impl->touchLastX = x;
++      impl->touchOriginY = impl->touchLastY = y;
++      impl->touchStartTime = time;
++      impl->touchMenuMoved = false;
++      puglTouchSendMotion(view, x, y, time, state);
++      impl->buttonPressTimeout = emscripten_set_timeout(puglTouchLongPress, PUGL_TOUCH_LONGPRESS_MS, view);
++      impl->touchState = PUGL_TOUCH_PENDING;
++    }
++    if (numActive >= 2 && impl->touchState != PUGL_TOUCH_MULTI && impl->touchState != PUGL_TOUCH_DONE) {
++      switch (impl->touchState) {
++      case PUGL_TOUCH_PENDING:
++        puglTouchClearTimer(impl);
++        break;
++      case PUGL_TOUCH_DRAGGING:
++        // a second finger ends the drag where it is
++        puglTouchSendButton(view, 0, false, impl->touchLastX, impl->touchLastY, time, state);
++        break;
++      default:
++        break;
++      }
++      puglTouchInitMulti(impl, &active[0], &active[1]);
++      puglTouchSendMotion(view, impl->touchMidX, impl->touchMidY, time, state);
++      impl->touchState = PUGL_TOUCH_MULTI;
++    }
+     break;
+ 
+-  case EMSCRIPTEN_EVENT_TOUCHSTART:
+-    // this event can be used for a couple of things, store it until we know more
+-    event.button.type   = PUGL_BUTTON_PRESS;
+-    event.button.time   = time;
+-    event.button.button = 1; // if no other event occurs soon, treat it as right-click
+-    event.button.x      = canvasX * scaleFactor;
+-    event.button.y      = canvasY * scaleFactor;
+-    event.button.xRoot  = point->screenX * scaleFactor;
+-    event.button.yRoot  = point->screenY * scaleFactor;
+-    event.button.state  = state;
+-    memcpy(&impl->nextButtonEvent, &event, sizeof(PuglEvent));
+-    impl->buttonPressTimeout = emscripten_set_timeout(puglTouchStartDelay, 2000, view);
+-    // fall through, moving "mouse" to touch position
+-
+   case EMSCRIPTEN_EVENT_TOUCHMOVE:
+-    event.motion.type  = PUGL_MOTION;
+-    event.motion.time  = time;
+-    event.motion.x     = canvasX * scaleFactor;
+-    event.motion.y     = canvasY * scaleFactor;
+-    event.motion.xRoot = point->screenX * scaleFactor;
+-    event.motion.yRoot = point->screenY * scaleFactor;
+-    event.motion.state = state;
++    switch (impl->touchState) {
++    case PUGL_TOUCH_PENDING: {
++      const double dx = px - impl->touchOriginX;
++      const double dy = py - impl->touchOriginY;
++      if (dx * dx + dy * dy > PUGL_TOUCH_SLOP_PX * PUGL_TOUCH_SLOP_PX) {
++        puglTouchClearTimer(impl);
++        puglTouchSendButton(view, 0, true, impl->touchOriginX, impl->touchOriginY, time, state);
++        puglTouchSendMotion(view, px, py, time, state);
++        impl->touchState = PUGL_TOUCH_DRAGGING;
++      }
++      break;
++    }
++    case PUGL_TOUCH_DRAGGING:
++      puglTouchSendMotion(view, px, py, time, state);
++      break;
++    case PUGL_TOUCH_MENU: {
++      puglTouchSendMotion(view, px, py, time, state);
++      const double dx = px - impl->touchOriginX;
++      const double dy = py - impl->touchOriginY;
++      if (dx * dx + dy * dy > PUGL_TOUCH_SLOP_PX * PUGL_TOUCH_SLOP_PX)
++        impl->touchMenuMoved = true;
++      break;
++    }
++    case PUGL_TOUCH_MULTI:
++      if (numActive >= 2) {
++        const double lastMidX = impl->touchMidX, lastMidY = impl->touchMidY, lastDist = impl->touchDist;
++        puglTouchInitMulti(impl, &active[0], &active[1]);
++        const double mdx = impl->touchMidX - lastMidX;
++        const double mdy = impl->touchMidY - lastMidY;
++        if (mdx != 0.0 || mdy != 0.0)
++          puglTouchSendScroll(view, impl->touchMidX, impl->touchMidY,
++                              -mdx / PUGL_TOUCH_PAN_DIV, mdy / PUGL_TOUCH_PAN_DIV, false, time);
++        if (lastDist > 1.0 && impl->touchDist > 1.0) {
++          const double l = log2(impl->touchDist / lastDist);
++          if (fabs(l) > 1e-3) {
++            puglTouchSendMotion(view, impl->touchMidX, impl->touchMidY, time, state);
++            puglTouchSendScroll(view, impl->touchMidX, impl->touchMidY, 0.0, PUGL_TOUCH_ZOOM_MULT * l, true, time);
++          }
++        }
++      }
++      break;
++    default:
++      break;
++    }
++    if (primaryActive) {
++      impl->touchLastX = px;
++      impl->touchLastY = py;
++    }
+     break;
+-  }
+ 
+-  if (event.type == PUGL_NOTHING)
+-    return EM_FALSE;
+-
+-  puglDispatchEventWithContext(view, &event);
++  case EMSCRIPTEN_EVENT_TOUCHEND:
++  case EMSCRIPTEN_EVENT_TOUCHCANCEL: {
++    const bool primaryLifted = !primaryActive;
++    switch (impl->touchState) {
++    case PUGL_TOUCH_PENDING:
++      puglTouchClearTimer(impl);
++      if (primaryLifted) {
++        if (!cancel) {
++          puglTouchSendButton(view, 0, true,  impl->touchOriginX, impl->touchOriginY, time, state);
++          puglTouchSendButton(view, 0, false, impl->touchOriginX, impl->touchOriginY, time, state);
++        }
++        impl->touchState = numActive == 0 ? PUGL_TOUCH_NONE : PUGL_TOUCH_DONE;
++      }
++      break;
++    case PUGL_TOUCH_DRAGGING:
++      if (primaryLifted || cancel) {
++        puglTouchSendButton(view, 0, false, px, py, time, state);
++        impl->touchState = numActive == 0 ? PUGL_TOUCH_NONE : PUGL_TOUCH_DONE;
++      }
++      break;
++    case PUGL_TOUCH_MENU:
++      if (primaryLifted) {
++        if (!cancel && impl->touchMenuMoved) {
++          puglTouchSendMotion(view, px, py, time, state);
++          puglTouchSendButton(view, 0, true,  px, py, time, state);
++          puglTouchSendButton(view, 0, false, px, py, time, state);
++        }
++        impl->touchState = numActive == 0 ? PUGL_TOUCH_NONE : PUGL_TOUCH_DONE;
++      }
++      break;
++    case PUGL_TOUCH_MULTI:
++      if (numActive < 2)
++        impl->touchState = numActive == 0 ? PUGL_TOUCH_NONE : PUGL_TOUCH_DONE;
++      else
++        puglTouchInitMulti(impl, &active[0], &active[1]);
++      break;
++    case PUGL_TOUCH_DONE:
++      if (numActive == 0)
++        impl->touchState = PUGL_TOUCH_NONE;
++      break;
++    default:
++      break;
++    }
++    if (cancel || numActive == 0) {
++      puglTouchClearTimer(impl);
++      impl->touchState = PUGL_TOUCH_NONE;
++    }
++    break;
++  }
++  }
+ 
+   // FIXME we must always return false??
+   return EM_FALSE;
+diff --git a/dgl/src/pugl-extra/wasm.h b/dgl/src/pugl-extra/wasm.h
+index 1aa3447..ec635c9 100644
+--- a/dgl/src/pugl-extra/wasm.h
++++ b/dgl/src/pugl-extra/wasm.h
+@@ -35,6 +35,14 @@ struct PuglInternalsImpl {
+   LastMotionValues lastMotion;
+   long buttonPressTimeout;
+   PuglEvent nextButtonEvent;
++  // touch gesture state (cardinal-web)
++  int    touchState;
++  int    touchPrimaryId;
++  bool   touchMenuMoved;
++  double touchStartTime;
++  double touchOriginX, touchOriginY;
++  double touchLastX, touchLastY;
++  double touchMidX, touchMidY, touchDist;
+ #ifdef PUGL_WASM_ASYNC_CLIPBOARD
+   PuglViewHintValue supportsClipboardRead;
+   PuglViewHintValue supportsClipboardWrite;

@@ -10,6 +10,7 @@ set -euo pipefail
 
 CARDINAL_DIR="${CARDINAL_DIR:-$(pwd)/cardinal}"   # a clone of DISTRHO/Cardinal
 PATCH="${PATCH:-$(dirname "$0")/cardinal-web-mini-additions.patch}"
+TOUCH_PATCH="${TOUCH_PATCH:-$(dirname "$0")/cardinal-web-touch-backend.patch}"
 
 if [ ! -d "$CARDINAL_DIR/.git" ]; then
   git clone --depth 1 https://github.com/DISTRHO/Cardinal.git "$CARDINAL_DIR"
@@ -38,6 +39,11 @@ sed -i -e 's/defined(__riscv)/defined(__riscv) || defined(__EMSCRIPTEN__)/' plug
 # Our module additions (docs/03): slew, 8:1 switch, clock, sequencers.
 if [ -f "$PATCH" ]; then
   git apply --check "$PATCH" && git apply "$PATCH" || echo "patch already applied or does not apply cleanly; inspect manually"
+fi
+
+# Our touch input backend for the DPF pugl web port (docs/09, docs/10).
+if [ -f "$TOUCH_PATCH" ]; then
+  git -C dpf apply --check "$TOUCH_PATCH" && git -C dpf apply "$TOUCH_PATCH" || echo "touch patch already applied or does not apply cleanly; inspect manually"
 fi
 
 make features
