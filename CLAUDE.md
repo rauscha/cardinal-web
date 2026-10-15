@@ -16,6 +16,15 @@ learning and sketching surface, not a performance instrument. Read
 `docs/02-research-audio-midi-education.md` (audio/MIDI rules, export design,
 learning content, module-manual coverage) before proposing anything.
 
+**Option A is proven on the engine side only (phone test 2026-10-15).**
+Its touch ergonomics are not settled and the rack-style canvas is not
+sacred: Andrew's instruction is to continue on A but not treat it as
+settled. The failures are traced to the pugl wasm touch backend and
+Rack's mouse-era menus, all in the fork and all ours to change; options,
+recommendation (fix the backend first) and the triggers for abandoning the
+canvas are in `docs/09-touch-input-findings.md`. Hexen's two-zoom-mode
+model is summarised there as a reference, not a template.
+
 **Under evaluation, not decided:** replacing the C++ canvas with our own
 HTML/SVG rack view over Cardinal's headless engine (option B+,
 `docs/06-engine-ui-split-option.md`). Licence permits it; the cost is
@@ -98,8 +107,9 @@ Development planning happens in a Claude cloud session in this repo.
   fork's `patches/welcome-wasm-mini.vcv`). Only the SIMD build is shipped.
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
-  on slow Wi-Fi, stock menus awkward on touch. Load time and menus are the
-  open problems; the engine is proven.
+  on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,
+  menus close on lift; no touch pan, no pinch zoom. Mechanism and fixes in
+  docs/09. The engine is proven; the input layer is not.
 - Patch-authoring gotcha: SEQ 3 reads its saved `gates` array as integers;
   JSON booleans disable every step. Resource dirs are copied by directory
   mtime, so after replacing a file under `patches/` delete
