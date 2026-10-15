@@ -52,7 +52,9 @@
   .jack.connected::after { content:''; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--muted); }
   .jack.out.connected::after { right:auto; left:4px; }
   #ghost { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:30; }
-  #chip { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:31; background:#2a2a30; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:none; align-items:center; gap:10px; font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  #chip { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:31; background:#2a2a30; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:none; flex-wrap:wrap; align-items:center; gap:8px 10px; font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  #chip .t { flex:1 1 180px; }
+  #chip button { flex:0 0 auto; white-space:nowrap; }
   #chip.show { display:flex; }
   #chip .t { flex:1; } #chip .t b { font-weight:600; }
   #chip button { border:1px solid var(--line); background:#3a3a42; color:var(--text); font:inherit; font-weight:600; padding:8px 12px; border-radius:9px; }
