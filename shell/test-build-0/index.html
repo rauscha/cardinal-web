@@ -6,7 +6,7 @@
     <meta name="description" content="Cardinal Mini" />
     <meta name="theme-color" content="#111111">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=0" user-scalable="no">
-    <title>Cardinal Web (test build 0)</title>
+    <title>Cardinal Web (test build 0.1)</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111111">
@@ -121,8 +121,9 @@
     <div id="start" role="dialog" aria-modal="true">
       <button id="start-btn">Tap to start audio</button>
       <p>Test build 0: the Cardinal Mini engine with 13 added modules, no shell yet.
-         Browsers only make sound after a tap. Landscape works best.
-         Long-press a module for its menu. Source and licences:
+         Browsers only make sound after a tap. The patch that loads plays by itself:
+         the RUN button on SEQ 3 (far left) starts and stops it, the row 1 knobs are the notes.
+         Landscape works best. Long-press a module for its menu. Source and licences:
          <a href="https://github.com/rauscha/cardinal-web" target="_blank" rel="noopener">github.com/rauscha/cardinal-web</a> (GPLv3+).</p>
     </div>
     <div id="status-strip"></div>
@@ -142,7 +143,7 @@
         if (!ctx || !el) return;
         var lat = (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
         el.textContent = 'audio ' + ctx.state + ' | ' + ctx.sampleRate + ' Hz | latency ~' + Math.round(lat * 1000) + ' ms | '
-          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0';
+          + (navigator.requestMIDIAccess ? 'Web MIDI available' : 'no Web MIDI in this browser') + ' | test build 0.1';
         el.style.display = 'block';
       }
       function cardinalWebAudioGate() {
