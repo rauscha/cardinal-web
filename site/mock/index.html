@@ -53,7 +53,7 @@
   @media (orientation: landscape) and (min-width: 700px) {
     main { max-width:none; display:flex; gap:12px; overflow-x:auto; padding-left:12px; }
     .card { flex:0 0 330px; margin:12px 0; }
-    #wires { display:none; }
+    #wires { width:100%; left:0; }
   }
   footer { position:fixed; left:0; right:0; bottom:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:rgba(17,17,17,.94); border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
 </style>
@@ -145,21 +145,32 @@ function render() {
   if (run) run.onclick = () => { running = !running; run.setAttribute('aria-pressed', running); run.textContent = running ? 'RUNNING' : 'STOPPED'; };
   requestAnimationFrame(drawWires);
 }
-// wires in the left margin: one vertical line per cable between the two jack rows
+// wires: portrait draws a transit map in the left margin; landscape draws
+// Rack-style curves from each OUT jack to its IN jack across the cards.
 function drawWires() {
   const svg = document.getElementById('wires'); if (!svg) return;
-  const mainRect = document.getElementById('main').getBoundingClientRect();
-  svg.setAttribute('height', document.getElementById('main').scrollHeight);
+  const main = document.getElementById('main'); const mainRect = main.getBoundingClientRect();
+  const landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches;
+  svg.setAttribute('height', main.scrollHeight); svg.setAttribute('width', landscape ? main.scrollWidth : 44);
+  svg.style.width = landscape ? main.scrollWidth + 'px' : '44px';
   let html = '';
   CABLES.forEach(([om, op, im, ip, type], k) => {
-    const a = document.querySelector(`.jack[data-mod="${om}"][data-port="${op}"]`), b = document.querySelector(`.jack[data-mod="${im}"][data-port="${ip}"]`);
+    const a = document.querySelector(`.jack[data-mod="${om}"][data-port="${op}"] svg`), b = document.querySelector(`.jack[data-mod="${im}"][data-port="${ip}"] svg`);
     if (!a || !b) return;
-    const y1 = a.getBoundingClientRect().top - mainRect.top + 18, y2 = b.getBoundingClientRect().top - mainRect.top + 18;
-    const x = 10 + (k % 4) * 8; const c = COLORS[type];
-    html += `<path d="M${x} ${y1} V${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
-             <path d="M${x} ${y1} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
-             <path d="M${x} ${y2} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
-             <circle cx="${x}" cy="${y1}" r="4" fill="${c}"/><circle cx="${x}" cy="${y2}" r="4" fill="${c}"/>`;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); const c = COLORS[type];
+    if (landscape) {
+      const x1 = ra.left + ra.width/2 - mainRect.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mainRect.top + main.scrollTop;
+      const x2 = rb.left + rb.width/2 - mainRect.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mainRect.top + main.scrollTop;
+      const sag = 40 + k * 6, dx = Math.max(60, (x2 - x1) * 0.4);
+      html += `<path d="M${x1} ${y1} C${x1 + dx} ${y1 + sag}, ${x2 - dx} ${y2 + sag}, ${x2} ${y2}" stroke="${c}" stroke-width="3" fill="none" opacity=".8"/>
+               <circle cx="${x1}" cy="${y1}" r="5" fill="${c}"/><circle cx="${x2}" cy="${y2}" r="5" fill="${c}"/>`;
+    } else {
+      const y1 = ra.top + ra.height/2 - mainRect.top, y2 = rb.top + rb.height/2 - mainRect.top; const x = 10 + (k % 4) * 8;
+      html += `<path d="M${x} ${y1} V${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <path d="M${x} ${y1} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <path d="M${x} ${y2} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <circle cx="${x}" cy="${y1}" r="4" fill="${c}"/><circle cx="${x}" cy="${y2}" r="4" fill="${c}"/>`;
+    }
   });
   svg.innerHTML = html;
 }
@@ -204,6 +215,7 @@ function draw(id, fn) { const c = document.getElementById('pic-' + id); if (!c) 
 document.getElementById('tab-cards').onclick = () => { skin = 'cards'; render(); };
 document.getElementById('tab-glyphs').onclick = () => { skin = 'glyphs'; render(); };
 window.addEventListener('resize', () => requestAnimationFrame(drawWires));
+window.addEventListener('orientationchange', () => setTimeout(drawWires, 300));
 render(); requestAnimationFrame(tick);
 </script>
 </body>
