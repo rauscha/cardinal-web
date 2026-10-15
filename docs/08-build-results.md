@@ -74,7 +74,7 @@ well under 1 MB. Size was never going to be the constraint on Mini.
 2. The fork bridge (load patch from a string, selection event, parameter
    readout) can now be written and tested in the same loop: edit, build,
    headless test.
-3. The headless engine wasm for the option B+ spike already exists.
+3. (Corrected 2026-10-15, docs/12: `CardinalMini_dsp.wasm` is the LV2 plugin binary, not a runnable headless engine. The B+ spike used the UI build with the C++ UI hidden at runtime.)
 
 ## First real-device result (Andrew, 2026-10-15)
 

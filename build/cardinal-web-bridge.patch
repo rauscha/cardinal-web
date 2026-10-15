@@ -1,0 +1,347 @@
+diff --git a/src/CardinalUI.cpp b/src/CardinalUI.cpp
+index 278e36a..4daaebc 100644
+--- a/src/CardinalUI.cpp
++++ b/src/CardinalUI.cpp
+@@ -290,6 +290,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
+ 
+ // -----------------------------------------------------------------------------------------------------------
+ 
++#ifdef DISTRHO_OS_WASM
++// cardinal-web bridge state (see the extern "C" block at the end of this file)
++class CardinalUI;
++static CardinalUI* gCardinalWebUI = nullptr;
++static bool gCardinalWebUiHidden = false;
++#endif
++
+ class CardinalUI : public CardinalBaseUI,
+                    public WindowParametersCallback
+ {
+@@ -490,10 +497,16 @@ public:
+         rack::contextSet(nullptr);
+ 
+         WindowParametersSetCallback(context->window, this);
++       #ifdef DISTRHO_OS_WASM
++        gCardinalWebUI = this;
++       #endif
+     }
+ 
+     ~CardinalUI() override
+     {
++       #ifdef DISTRHO_OS_WASM
++        gCardinalWebUI = nullptr;
++       #endif
+         rack::contextSet(context);
+ 
+         context->nativeWindowId = 0;
+@@ -531,12 +544,20 @@ public:
+ 
+     void onNanoDisplay() override
+     {
++       #ifdef DISTRHO_OS_WASM
++        if (gCardinalWebUiHidden)
++            return;
++       #endif
+         const ScopedContext sc(this);
+         context->window->step();
+     }
+ 
+     void uiIdle() override
+     {
++       #ifdef DISTRHO_OS_WASM
++        if (gCardinalWebUiHidden)
++            return;
++       #endif
+        #ifdef DPF_RUNTIME_TESTING
+         if (inSelfTest)
+         {
+@@ -1276,4 +1297,290 @@ UI* createUI()
+ 
+ // -----------------------------------------------------------------------------------------------------------
+ 
++
++// -----------------------------------------------------------------------------------------------------------
++// cardinal-web bridge: a small C API for a page-side UI (docs/12). Only on the web build.
++
++#ifdef DISTRHO_OS_WASM
++namespace cardinalweb {
++
++struct WatchItem { int64_t moduleId; int kind; int index; }; // kind: 0 input, 1 output, 2 light, 3 param
++static std::vector<WatchItem> gWatch;
++static std::string gResult;
++
++static CardinalPluginContext* ctx()
++{
++    return gCardinalWebUI != nullptr ? gCardinalWebUI->context : nullptr;
++}
++
++struct Ctx {
++    CardinalPluginContext* const c;
++    Ctx(CardinalPluginContext* const c_) : c(c_) { rack::contextSet(c); }
++    ~Ctx() { rack::contextSet(nullptr); }
++};
++
++static const char* result(json_t* const j)
++{
++    if (char* const s = json_dumps(j, JSON_COMPACT))
++    {
++        gResult = s;
++        std::free(s);
++    }
++    else
++    {
++        gResult = "null";
++    }
++    json_decref(j);
++    return gResult.c_str();
++}
++
++} // namespace cardinalweb
++
++extern "C" {
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_ready()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    return c != nullptr && c->engine != nullptr && c->scene != nullptr ? 1 : 0;
++}
++
++EMSCRIPTEN_KEEPALIVE void cardinalweb_set_ui_hidden(const int hidden)
++{
++    gCardinalWebUiHidden = hidden != 0;
++}
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_load_patch(const char* const json)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr || json == nullptr)
++        return 0;
++    const std::string path = rack::system::join(rack::system::getTempDirectory(), "cardinalweb-load.vcv");
++    if (FILE* const f = std::fopen(path.c_str(), "w"))
++    {
++        std::fwrite(json, std::strlen(json), 1, f);
++        std::fclose(f);
++    }
++    else
++    {
++        return 0;
++    }
++    const cardinalweb::Ctx sc(c);
++    try {
++        c->patch->loadAction(path);
++        c->scene->rackScroll->reset();
++    } catch (const rack::Exception& e) {
++        d_stderr("cardinalweb_load_patch: %s", e.what());
++        return 0;
++    }
++    return 1;
++}
++
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_get_patch_json()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return "null";
++    const cardinalweb::Ctx sc(c);
++    return cardinalweb::result(c->patch->toJson());
++}
++
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_get_modules_json()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return "[]";
++    const cardinalweb::Ctx sc(c);
++    json_t* const arr = json_array();
++    for (const int64_t id : c->engine->getModuleIds())
++    {
++        rack::engine::Module* const m = c->engine->getModule(id);
++        if (m == nullptr || m->model == nullptr) continue;
++        json_t* const jm = json_object();
++        json_object_set_new(jm, "id", json_integer(id));
++        json_object_set_new(jm, "plugin", json_string(m->model->plugin->slug.c_str()));
++        json_object_set_new(jm, "model", json_string(m->model->slug.c_str()));
++        json_object_set_new(jm, "name", json_string(m->model->name.c_str()));
++        json_object_set_new(jm, "description", json_string(m->model->description.c_str()));
++        json_object_set_new(jm, "bypassed", json_boolean(m->isBypassed()));
++        if (rack::app::ModuleWidget* const mw = c->scene->rack->getModule(id))
++        {
++            json_t* const pos = json_array();
++            json_array_append_new(pos, json_real(mw->box.pos.x / rack::app::RACK_GRID_WIDTH));
++            json_array_append_new(pos, json_real(mw->box.pos.y / rack::app::RACK_GRID_HEIGHT));
++            json_object_set_new(jm, "pos", pos);
++            json_object_set_new(jm, "hp", json_integer(int(std::round(mw->box.size.x / rack::app::RACK_GRID_WIDTH))));
++        }
++        json_t* const params = json_array();
++        for (size_t i = 0; i < m->paramQuantities.size(); ++i)
++        {
++            rack::engine::ParamQuantity* const pq = m->paramQuantities[i];
++            if (pq == nullptr) continue;
++            json_t* const jp = json_object();
++            json_object_set_new(jp, "id", json_integer(i));
++            json_object_set_new(jp, "name", json_string(pq->name.c_str()));
++            json_object_set_new(jp, "unit", json_string(pq->getUnit().c_str()));
++            json_object_set_new(jp, "description", json_string(pq->getDescription().c_str()));
++            json_object_set_new(jp, "min", json_real(pq->minValue));
++            json_object_set_new(jp, "max", json_real(pq->maxValue));
++            json_object_set_new(jp, "default", json_real(pq->defaultValue));
++            json_object_set_new(jp, "value", json_real(pq->getValue()));
++            json_object_set_new(jp, "display", json_string(pq->getDisplayValueString().c_str()));
++            json_object_set_new(jp, "snap", json_boolean(pq->snapEnabled));
++            json_object_set_new(jp, "switch", json_boolean(dynamic_cast<rack::engine::SwitchQuantity*>(pq) != nullptr));
++            if (rack::engine::SwitchQuantity* const sq = dynamic_cast<rack::engine::SwitchQuantity*>(pq))
++            {
++                json_t* const labels = json_array();
++                for (const std::string& l : sq->labels) json_array_append_new(labels, json_string(l.c_str()));
++                json_object_set_new(jp, "labels", labels);
++            }
++            json_array_append_new(params, jp);
++        }
++        json_object_set_new(jm, "params", params);
++        json_t* const ins = json_array();
++        for (size_t i = 0; i < m->inputInfos.size(); ++i)
++        {
++            rack::engine::PortInfo* const pi = m->inputInfos[i];
++            json_t* const jp = json_object();
++            json_object_set_new(jp, "id", json_integer(i));
++            json_object_set_new(jp, "name", json_string(pi != nullptr ? pi->name.c_str() : ""));
++            json_object_set_new(jp, "description", json_string(pi != nullptr ? pi->description.c_str() : ""));
++            json_object_set_new(jp, "connected", json_boolean(m->inputs[i].isConnected()));
++            json_array_append_new(ins, jp);
++        }
++        json_object_set_new(jm, "inputs", ins);
++        json_t* const outs = json_array();
++        for (size_t i = 0; i < m->outputInfos.size(); ++i)
++        {
++            rack::engine::PortInfo* const pi = m->outputInfos[i];
++            json_t* const jp = json_object();
++            json_object_set_new(jp, "id", json_integer(i));
++            json_object_set_new(jp, "name", json_string(pi != nullptr ? pi->name.c_str() : ""));
++            json_object_set_new(jp, "description", json_string(pi != nullptr ? pi->description.c_str() : ""));
++            json_object_set_new(jp, "connected", json_boolean(m->outputs[i].isConnected()));
++            json_array_append_new(outs, jp);
++        }
++        json_object_set_new(jm, "outputs", outs);
++        json_object_set_new(jm, "lights", json_integer(int(m->lights.size())));
++        json_array_append_new(arr, jm);
++    }
++    return cardinalweb::result(arr);
++}
++
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_get_cables_json()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return "[]";
++    const cardinalweb::Ctx sc(c);
++    json_t* const arr = json_array();
++    for (const int64_t id : c->engine->getCableIds())
++    {
++        rack::engine::Cable* const cable = c->engine->getCable(id);
++        if (cable == nullptr || cable->inputModule == nullptr || cable->outputModule == nullptr) continue;
++        json_t* const jc = json_object();
++        json_object_set_new(jc, "id", json_integer(id));
++        json_object_set_new(jc, "outputModuleId", json_integer(cable->outputModule->id));
++        json_object_set_new(jc, "outputId", json_integer(cable->outputId));
++        json_object_set_new(jc, "inputModuleId", json_integer(cable->inputModule->id));
++        json_object_set_new(jc, "inputId", json_integer(cable->inputId));
++        json_array_append_new(arr, jc);
++    }
++    return cardinalweb::result(arr);
++}
++
++EMSCRIPTEN_KEEPALIVE void cardinalweb_set_param(const double moduleId, const int paramId, const float value)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return;
++    rack::engine::Module* const m = c->engine->getModule(int64_t(moduleId));
++    if (m == nullptr || paramId < 0 || paramId >= int(m->paramQuantities.size())) return;
++    rack::engine::ParamQuantity* const pq = m->paramQuantities[paramId];
++    const float v = pq != nullptr ? rack::math::clamp(value, std::min(pq->minValue, pq->maxValue), std::max(pq->minValue, pq->maxValue)) : value;
++    c->engine->setParamValue(m, paramId, v);
++}
++
++EMSCRIPTEN_KEEPALIVE float cardinalweb_get_param(const double moduleId, const int paramId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return 0.f;
++    rack::engine::Module* const m = c->engine->getModule(int64_t(moduleId));
++    if (m == nullptr || paramId < 0 || paramId >= int(m->params.size())) return 0.f;
++    return c->engine->getParamValue(m, paramId);
++}
++
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_get_param_display(const double moduleId, const int paramId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return "";
++    const cardinalweb::Ctx sc(c);
++    rack::engine::Module* const m = c->engine->getModule(int64_t(moduleId));
++    if (m == nullptr || paramId < 0 || paramId >= int(m->paramQuantities.size()) || m->paramQuantities[paramId] == nullptr) return "";
++    cardinalweb::gResult = m->paramQuantities[paramId]->getDisplayValueString();
++    return cardinalweb::gResult.c_str();
++}
++
++// json: [[moduleId, kind, index], ...]  kind: 0 input voltage, 1 output voltage, 2 light brightness, 3 param value
++EMSCRIPTEN_KEEPALIVE int cardinalweb_watch(const char* const json)
++{
++    cardinalweb::gWatch.clear();
++    json_error_t err;
++    json_t* const arr = json_loads(json, 0, &err);
++    if (arr == nullptr || !json_is_array(arr)) { if (arr) json_decref(arr); return 0; }
++    size_t i; json_t* item;
++    json_array_foreach(arr, i, item)
++    {
++        if (!json_is_array(item) || json_array_size(item) < 3) continue;
++        cardinalweb::WatchItem w;
++        w.moduleId = int64_t(json_number_value(json_array_get(item, 0)));
++        w.kind = int(json_integer_value(json_array_get(item, 1)));
++        w.index = int(json_integer_value(json_array_get(item, 2)));
++        cardinalweb::gWatch.push_back(w);
++    }
++    json_decref(arr);
++    return int(cardinalweb::gWatch.size());
++}
++
++EMSCRIPTEN_KEEPALIVE int cardinalweb_read_watched(float* const out, const int max)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return 0;
++    const int n = std::min(max, int(cardinalweb::gWatch.size()));
++    int64_t lastId = -1; rack::engine::Module* m = nullptr;
++    for (int i = 0; i < n; ++i)
++    {
++        const cardinalweb::WatchItem& w = cardinalweb::gWatch[i];
++        if (w.moduleId != lastId) { m = c->engine->getModule(w.moduleId); lastId = w.moduleId; }
++        float v = 0.f;
++        if (m != nullptr)
++        {
++            switch (w.kind)
++            {
++            case 0: if (w.index >= 0 && w.index < int(m->inputs.size())) v = m->inputs[w.index].getVoltage(); break;
++            case 1: if (w.index >= 0 && w.index < int(m->outputs.size())) v = m->outputs[w.index].getVoltage(); break;
++            case 2: if (w.index >= 0 && w.index < int(m->lights.size())) v = m->lights[w.index].getBrightness(); break;
++            case 3: if (w.index >= 0 && w.index < int(m->params.size())) v = m->params[w.index].getValue(); break;
++            }
++        }
++        out[i] = v;
++    }
++    return n;
++}
++
++EMSCRIPTEN_KEEPALIVE void cardinalweb_set_cpu_meter(const int enabled)
++{
++    rack::settings::cpuMeter = enabled != 0;
++}
++
++EMSCRIPTEN_KEEPALIVE double cardinalweb_meter_average()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    return c != nullptr ? c->engine->getMeterAverage() : 0.0;
++}
++
++EMSCRIPTEN_KEEPALIVE double cardinalweb_meter_max()
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    return c != nullptr ? c->engine->getMeterMax() : 0.0;
++}
++
++} // extern "C"
++#endif // DISTRHO_OS_WASM
++
+ END_NAMESPACE_DISTRHO

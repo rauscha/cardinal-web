@@ -1,0 +1,10 @@
+cards: SEQ 3 | VCO | ADSR | VCA | Audio 2 | Text Editor
+SEQ3 current step over 1.4 s: 6,6,7,7,0,0,1,1,2,2,3,3
+first glyph canvas: pic-12
+stats: engine 4.6% avg / 13.6% max of real time · page frame 41.7 ms avg, 166.7 ms p95 · audio running 44100 Hz, buffer 2048 · C++ UI hidden · 6 modules, 43 signals watched · param→engine 38 ms
+tempo after tap at 90%: 633.36
+stats with stock UI shown: engine 5.1% avg / 16.1% max of real time · page frame 80.6 ms avg, 266.7 ms p95 · audio running 44100 Hz, buffer 2048 · C++ UI shown · 6 modules, 43 signals watched
+stats hidden again: engine 3.9% avg / 5.8% max of real time · page frame 130.0 ms avg, 366.7 ms p95 · audio running 44100 Hz, buffer 2048 · C++ UI hidden · 6 modules, 43 signals watched
+[console] [34m[22.513 info Rack/src/patch.cpp:273 load] [0mLoading patch /tmp/cardinalweb-load.vcv
+cards after reload: 6
+audio: running

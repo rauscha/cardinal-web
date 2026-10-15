@@ -52,6 +52,12 @@ if [ -f "$SHAPES_PATCH" ]; then
   git apply --check "$SHAPES_PATCH" && git apply "$SHAPES_PATCH" || echo "port-shapes patch already applied or does not apply cleanly; inspect manually"
 fi
 
+# JavaScript bridge for the page-side glyph UI (docs/12).
+BRIDGE_PATCH="${BRIDGE_PATCH:-$(dirname "$0")/cardinal-web-bridge.patch}"
+if [ -f "$BRIDGE_PATCH" ]; then
+  git apply --check "$BRIDGE_PATCH" && git apply "$BRIDGE_PATCH" || echo "bridge patch already applied or does not apply cleanly; inspect manually"
+fi
+
 # Flat component graphics (original, CC0) over Rack's component library and
 # Fundamental's components; regenerate with build/reskin/generate.py.
 RESKIN="$(dirname "$0")/reskin/out"

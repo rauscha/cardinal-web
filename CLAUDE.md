@@ -36,11 +36,16 @@ work in both orientations, and live glyphs are the better direction for
 teaching. That is the target look for anything we draw ourselves; it does
 not by itself decide option B+ (see the spike criteria in docs/06).
 
-**Under evaluation, not decided:** replacing the C++ canvas with our own
-HTML/SVG rack view over Cardinal's headless engine (option B+,
-`docs/06-engine-ui-split-option.md`). Licence permits it; the cost is
-months. One spike decides it. Everything in the option A shell carries over
-either way, so the shell is built first.
+**Option B+ spiked 2026-10-15 (docs/12), decided in principle as a
+hybrid:** the same web build carries a C API (`build/cardinal-web-bridge.patch`,
+exported from the fork's UI file) that hides the C++ UI at runtime and
+exposes patch load/save, module metadata, params and per-frame signal
+readout. `shell/spike-b/` builds glyph cards for every module from that
+metadata and is live at `/spike-b/`. Engine CPU about 4 % either way;
+param-to-engine 38 ms. Not yet built: add/remove cables and modules from
+the page, custom displays, audio-rate readout. The stock canvas stays as
+the fallback view in the same build. `CardinalMini_dsp.wasm` is the LV2
+plugin binary, not a runnable headless engine (docs/08 was wrong).
 
 **Mini module list is ours, not upstream's (decided 2026-10-14):** add
 slew limiter (Bogaudio SLEW), 8:1 switch (Bogaudio SWITCH81, Fundamental
@@ -110,8 +115,9 @@ Development planning happens in a Claude cloud session in this repo.
   CC0) that the build script copies over Rack's component library and
   Fundamental's components; `build/cardinal-web-port-shapes.patch` adds the
   jack-shape hook in `src/override/ModuleWidget.cpp`. Both are in build 0.3.
-- `make mini` also produces `CardinalMini_dsp.wasm`, a headless engine with
-  no UI, which is the starting point for the option B+ spike.
+- `build/cardinal-web-bridge.patch` adds the page-side C API (docs/12).
+  `CardinalMini_dsp.wasm` in the LV2 bundle is the plugin binary, not a
+  headless engine; the headless build path is not used.
 - In this cloud session GitHub archive downloads are blocked (git clones are
   not); Emscripten's SDL2 port needs `EMCC_LOCAL_PORTS` pointing at a clone.
 
@@ -127,8 +133,9 @@ Development planning happens in a Claude cloud session in this repo.
   Test build 0.2 (2026-10-15) adds the touch backend (docs/10). Test
   build 0.3 (2026-10-15) adds flat component graphics (`build/reskin/`),
   shape-coded jacks (`build/cardinal-web-port-shapes.patch`) and the design
-  mock at `/mock/` (`shell/mock/index.html`, docs/11 §8). Awaiting Andrew's
-  phone verdict on all three.
+  mock at `/mock/` (`shell/mock/index.html`, docs/11 §8); Andrew: loves the
+  cards, glyphs better for teaching. Test build 0.4 (2026-10-15) adds the
+  engine bridge and the live glyph spike at `/spike-b/` (docs/12).
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,
