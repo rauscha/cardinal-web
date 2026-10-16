@@ -16,6 +16,7 @@
   .btn { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-weight:600; padding:9px 12px; border-radius:9px; }
   .btn.primary { background:var(--accent); color:#111; border-color:var(--accent); }
   .btn:disabled { opacity:.4; }
+  .card.flash { box-shadow:0 0 0 3px var(--accent); }
   #stats { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:6px; line-height:1.5; }
   #stats b { color:var(--text); font-weight:600; }
   main { position:relative; padding:4px 12px 40px 44px; max-width:560px; }
@@ -51,11 +52,23 @@
   .jack.armed { background:#3a3a42; box-shadow:0 0 0 2px var(--accent) inset; }
   .jack.connected::after { content:''; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--muted); }
   .jack.out.connected::after { right:auto; left:4px; }
+  #sheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
+  #sheet[hidden] { display:none; }
+  .sheet-hd { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .sheet-hd input { flex:1; font:inherit; font-size:16px; padding:9px 12px; border-radius:9px; border:1px solid var(--line); background:#2b2b31; color:var(--text); }
+  .tags { display:flex; gap:6px; overflow-x:auto; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .tags button { flex:none; border:1px solid var(--line); background:#2a2a30; color:var(--muted); font:inherit; font-size:13px; padding:6px 10px; border-radius:999px; }
+  .tags button[aria-pressed="true"] { background:#3a3a42; color:var(--text); }
+  #sheet-list { overflow-y:auto; flex:1; padding:6px 0 calc(16px + env(safe-area-inset-bottom)); }
+  .model { display:block; width:100%; text-align:left; border:0; border-bottom:1px solid #26262b; background:transparent; color:var(--text); font:inherit; padding:12px 14px; }
+  .model b { display:block; font-size:15px; } .model span { display:block; color:var(--muted); font-size:12.5px; margin-top:2px; } .model i { font-style:normal; color:var(--muted); font-size:11.5px; }
+  .card .hd .menu { border:1px solid var(--line); background:#2a2a30; color:var(--text); border-radius:50%; width:30px; height:30px; font-weight:700; flex:none; }
   #ghost { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:30; }
   #chip { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:31; background:#2a2a30; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:none; flex-wrap:wrap; align-items:center; gap:8px 10px; font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
   #chip .t { flex:1 1 180px; }
   #chip button { flex:0 0 auto; white-space:nowrap; }
   #chip.show { display:flex; }
+  main.chip-open { padding-bottom:170px; }
   #chip .t { flex:1; } #chip .t b { font-weight:600; }
   #chip button { border:1px solid var(--line); background:#3a3a42; color:var(--text); font:inherit; font-weight:600; padding:8px 12px; border-radius:9px; }
   #chip button.danger { background:#5a2a2a; }
@@ -84,6 +97,7 @@
     <button class="btn" id="toggle-ui">Show stock UI</button>
     <button class="btn" id="latency">Latency test</button>
     <button class="btn" id="reload">Reload startup patch</button>
+    <button class="btn" id="add">Add module</button>
     <button class="btn" id="undo" disabled>Undo</button>
     <button class="btn" id="redo" disabled>Redo</button>
   </div>
@@ -91,6 +105,11 @@
 </header>
 <div id="boot">Loading the engine (about 10 MB). The page builds its cards from the engine's own module list.</div>
 <main id="main"><svg id="wires"></svg></main>
+<div id="sheet" hidden>
+  <div class="sheet-hd"><input id="sheet-q" type="search" placeholder="Search modules" autocomplete="off"><button class="btn" id="sheet-close">Close</button></div>
+  <div id="sheet-tags" class="tags"></div>
+  <div id="sheet-list"></div>
+</div>
 <svg id="ghost"></svg>
 <div id="chip"><div class="t"></div><button id="chip-disconnect" class="danger">Disconnect</button><button id="chip-cancel">Cancel</button></div>
 <div id="canvas_wrapper">
@@ -133,6 +152,9 @@ function bootBridge() {
     addCable: Module.cwrap('cardinalweb_add_cable', 'number', ['number', 'number', 'number', 'number']),
     removeCable: Module.cwrap('cardinalweb_remove_cable', 'number', ['number']),
     moveCable: Module.cwrap('cardinalweb_move_cable', 'number', ['number', 'number', 'number', 'number', 'number']),
+    modelsJson: Module.cwrap('cardinalweb_get_models_json', 'string', []),
+    addModule: Module.cwrap('cardinalweb_add_module', 'number', ['string', 'string']),
+    removeModule: Module.cwrap('cardinalweb_remove_module', 'number', ['number']),
     paramCommit: Module.cwrap('cardinalweb_param_commit', null, ['number', 'number', 'number', 'number']),
     canUndo: Module.cwrap('cardinalweb_can_undo', 'number', []), canRedo: Module.cwrap('cardinalweb_can_redo', 'number', []),
     undoName: Module.cwrap('cardinalweb_undo_name', 'string', []), redoName: Module.cwrap('cardinalweb_redo_name', 'string', []),
@@ -184,8 +206,8 @@ function setArm(a, html, canDisconnect) {
 }
 function clearArm() { if (arm) arm.el.classList.remove('armed'); var had = !!arm; arm = null; document.querySelectorAll('.jack.target, .jack.hover').forEach(t => t.classList.remove('target', 'match', 'hover')); hideChip(); clearGhost(); if (had) drawWires(); }
 function showChip(html, canDisconnect, extra) { chip.querySelector('.t').innerHTML = html; document.getElementById('chip-disconnect').style.display = canDisconnect ? '' : 'none'; chip.querySelectorAll('.extra').forEach(b => b.remove());
-  (extra || []).forEach(x => { var b = document.createElement('button'); b.className = 'extra'; b.textContent = x[0]; b.onclick = x[1]; chip.insertBefore(b, document.getElementById('chip-disconnect')); }); chip.classList.add('show'); }
-function hideChip() { chip.classList.remove('show'); }
+  (extra || []).forEach(x => { var b = document.createElement('button'); b.className = 'extra'; b.textContent = x[0]; b.onclick = x[1]; chip.insertBefore(b, document.getElementById('chip-disconnect')); }); chip.classList.add('show'); document.getElementById('main').classList.add('chip-open'); }
+function hideChip() { chip.classList.remove('show'); document.getElementById('main').classList.remove('chip-open'); }
 function pickUpInput(j) { // hold the plug that sits in this connected input
   var c = cableOnInput(+j.dataset.m, +j.dataset.p), o = jackEl(c.outputModuleId, 'o', c.outputId); if (!o) return;
   setArm({ el: o, type: j.dataset.t, targets: 'io', cable: c, held: j }, 'Holding the cable from ' + cableLabel(c) + '<br>drop on another <b>IN</b> to move it, on an <b>OUT</b> to change its source', true);
@@ -262,7 +284,7 @@ function card(m) {
   else body = '<div class="ctl">';
   body += primParams.map(p => bar(m, p)).join('') + '</div>';
   if (rest.length) body += '<details class="more"><summary>More (' + rest.length + ')</summary>' + rest.map(p => bar(m, p)).join('') + '</details>';
-  return '<section class="card" id="card-' + m.id + '"><div class="hd"><h2>' + esc(m.name) + '</h2><div class="what">' + esc(m.description || m.plugin) + '</div></div>' + body + jacks(m) + '</section>';
+  return '<section class="card" id="card-' + m.id + '"><div class="hd"><h2>' + esc(m.name) + '</h2><div class="what">' + esc(m.description || m.plugin) + '</div><button class="menu" data-remove="' + m.id + '" aria-label="Remove ' + esc(m.name) + '">×</button></div>' + body + jacks(m) + '</section>';
 }
 function bar(m, p) { var v = (p.value - p.min) / (p.max - p.min || 1);
   return '<div class="bar" data-m="' + m.id + '" data-p="' + p.id + '" title="' + esc(p.description) + '"><label>' + esc(p.name) + '</label><div class="track"><div class="fill" style="width:' + (v*100) + '%"></div><div class="knob" style="left:' + (v*100) + '%"></div></div><div class="val">' + esc(disp(p)) + '</div></div>'; }
@@ -284,7 +306,7 @@ document.addEventListener('pointerdown', e => {
   move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; B.paramCommit(mid, pid, startValue, B.getParam(mid, pid)); updateUndo(); };
 });
 function updateUndo() { var u = document.getElementById('undo'), r = document.getElementById('redo'); u.disabled = !B.canUndo(); r.disabled = !B.canRedo(); u.textContent = B.canUndo() ? 'Undo ' + B.undoName() : 'Undo'; r.textContent = B.canRedo() ? 'Redo ' + B.redoName() : 'Redo'; }
-function afterHistory() { refreshCables(); lastParamPoll = 0; updateUndo(); }
+function afterHistory() { var n = JSON.parse(B.modulesJson()).length; if (n !== mods.length) rebuild(); else refreshCables(); lastParamPoll = 0; updateUndo(); }
 document.getElementById('undo').onclick = () => { if (B && B.undo()) afterHistory(); };
 document.getElementById('redo').onclick = () => { if (B && B.redo()) afterHistory(); };
 document.addEventListener('keydown', e => { if (!B) return; var z = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'; if (!z) return; e.preventDefault(); if (e.shiftKey ? B.redo() : B.undo()) afterHistory(); });
@@ -351,6 +373,24 @@ document.addEventListener('toggle', queueWires, true);
 new ResizeObserver(queueWires).observe(document.getElementById('main'));
 new MutationObserver(() => { document.querySelectorAll('.card').forEach(c => { if (!c.dataset.ro) { c.dataset.ro = 1; new ResizeObserver(queueWires).observe(c); } }); }).observe(document.getElementById('main'), { childList: true });
 window.addEventListener('resize', queueWires);
+// ---------- add and remove modules
+var models = null, sheetTag = '';
+function openSheet() { if (!B) return; if (!models) { models = JSON.parse(B.modelsJson()); models.sort((a, b) => a.name.localeCompare(b.name)); }
+  var tags = {}; models.forEach(m => m.tags.forEach(t => tags[t] = (tags[t] || 0) + 1));
+  document.getElementById('sheet-tags').innerHTML = '<button aria-pressed="' + (sheetTag === '') + '" data-tag="">All</button>' + Object.keys(tags).sort((a, b) => tags[b] - tags[a]).slice(0, 18).map(t => '<button aria-pressed="' + (sheetTag === t) + '" data-tag="' + esc(t) + '">' + esc(t) + ' ' + tags[t] + '</button>').join('');
+  document.getElementById('sheet').hidden = false; renderSheet(); setTimeout(() => document.getElementById('sheet-q').focus(), 50); }
+function renderSheet() { var q = document.getElementById('sheet-q').value.trim().toLowerCase();
+  var list = models.filter(m => (!sheetTag || m.tags.indexOf(sheetTag) >= 0) && (!q || (m.name + ' ' + m.plugin + ' ' + m.description + ' ' + m.tags.join(' ')).toLowerCase().indexOf(q) >= 0));
+  document.getElementById('sheet-list').innerHTML = list.map(m => '<button class="model" data-plugin="' + esc(m.plugin) + '" data-model="' + esc(m.model) + '"><b>' + esc(m.name) + ' <i>' + esc(m.pluginName) + '</i></b><span>' + esc(m.description || m.tags.join(', ')) + '</span></button>').join('') || '<div class="model"><span>No module matches.</span></div>'; }
+document.getElementById('add').onclick = openSheet;
+document.getElementById('sheet-close').onclick = () => document.getElementById('sheet').hidden = true;
+document.getElementById('sheet-q').oninput = renderSheet;
+document.getElementById('sheet-tags').addEventListener('click', e => { var b = e.target.closest('button[data-tag]'); if (!b) return; sheetTag = b.dataset.tag; openSheet(); });
+document.getElementById('sheet-list').addEventListener('click', e => { var b = e.target.closest('.model[data-model]'); if (!b) return;
+  var id = B.addModule(b.dataset.plugin, b.dataset.model); document.getElementById('sheet').hidden = true; if (id < 0) return;
+  rebuild(); updateUndo(); var card = document.getElementById('card-' + id); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 900); } });
+document.addEventListener('click', e => { var b = e.target.closest('button[data-remove]'); if (!b || !B) return; var m = mods.find(x => x.id === +b.dataset.remove); if (!m) return;
+  showChip('Remove <b>' + esc(m.name) + '</b> and its cables? Undo brings it back.', false, [['Remove', () => { B.removeModule(m.id); hideChip(); rebuild(); updateUndo(); }]]); });
 // ---------- buttons
 document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio running'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
 document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };
