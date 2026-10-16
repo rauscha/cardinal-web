@@ -1,0 +1,79 @@
+[console] The ScriptProcessorNode is deprecated. Use AudioWorkletNode instead. (https://bit.ly/audio-worklet)
+[console] [34m[0.005 info CardinalCommon.cpp:672 Initializer] [0mCardinal Wasm/Standalone 26.02, compatible with Rack version 2.4.1
+[console] [34m[0.008 info CardinalCommon.cpp:673 Initializer] [0mEmscripten 3.1.27 #1 wasm32
+[console] [34m[0.008 info CardinalCommon.cpp:674 Initializer] [0mBinary filename: 
+[console] [34m[0.009 info CardinalCommon.cpp:676 Initializer] [0mBundle path: 
+[console] [34m[0.009 info CardinalCommon.cpp:682 Initializer] [0mSystem directory: /resources
+[console] [34m[0.009 info CardinalCommon.cpp:683 Initializer] [0mUser directory: /home/web_user/Cardinal
+[console] [34m[0.009 info CardinalCommon.cpp:684 Initializer] [0mTemplate patch: /home/web_user/Cardinal/templates/mini.vcv
+[console] [34m[0.010 info CardinalCommon.cpp:685 Initializer] [0mSystem template patch: /resources/patches/welcome-wasm-mini.vcv
+[console] [34m[0.011 info CardinalCommon.cpp:699 Initializer] [0mInitializing plugins
+[console] [35m[0.012 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module Cardinal
+[console] [35m[0.022 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module Fundamental
+[console] [35m[0.026 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module AriaModules
+[console] [35m[0.028 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module AudibleInstruments
+[console] [35m[0.030 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module BogaudioModules
+[console] [35m[0.042 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module ImpromptuModular
+[console] [35m[0.044 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module MockbaModular
+[console] [35m[0.046 debug plugins-mini.cpp:124 StaticPluginLoader] [0mLoading plugin module surgext
+[console] [34m[0.050 info CardinalCommon.cpp:702 Initializer] [0mInitializing plugin browser DB
+[console] [34m[0.057 info CardinalCommon.cpp:764 loadSettings] [0mLoading settings
+[console] [34m[0.058 info Rack/src/settings.cpp:519 load] [0mLoading settings /home/web_user/Cardinal/mini.json
+[console] [34m[0.058 info CardinalCommon.cpp:722 Initializer] [0mOSC Remote control is not enabled in this build
+[console] [34m[0.139 info Rack/src/patch.cpp:273 load] [0mLoading patch /home/web_user/Cardinal/templates/mini.vcv
+[console] [34m[0.145 info Rack/src/patch.cpp:273 load] [0mLoading patch /resources/patches/welcome-wasm-mini.vcv
+[console] [34m[0.148 info Rack/src/patch.cpp:339 loadAutosave] [0mLoading autosave /tmp/Cardinal.0001/patch.json
+[console] [34m[0.164 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/SEQ3.svg
+[console] [34m[0.166 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/ScrewSilver.svg
+[console] [34m[0.167 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/ScrewBlack.svg
+[console] [34m[0.167 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/knob-marker.svg
+[console] [34m[0.168 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/knob.svg
+[console] [34m[0.169 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/knob-marker-small.svg
+[console] [34m[0.169 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/knob-small.svg
+[console] [34m[0.170 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/port.svg
+[console] [34m[0.171 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/button-off.svg
+[console] [34m[0.172 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/button-on.svg
+[console] [34m[0.173 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/PortClock.svg
+[console] [34m[0.173 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/PortGate.svg
+[console] [34m[0.193 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/VCO.svg
+[console] [34m[0.194 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/PortPitch.svg
+[console] [34m[0.199 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/ADSR.svg
+[console] [34m[0.201 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/components/ADSR-bg.svg
+[console] [34m[0.202 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Fundamental/res/VCA-1.svg
+[console] [34m[0.203 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/Cardinal/res/HostAudio.svg
+[console] [34m[0.204 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/PJ301M.svg
+[console] [34m[0.212 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget VCV SEQ 3
+[console] [34m[0.213 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget VCV VCO
+[console] [34m[0.213 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget VCV ADSR
+[console] [34m[0.215 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget VCV VCA
+[console] [34m[0.215 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget DISTRHO Audio 2
+[console] [34m[0.216 info Rack/src/app/RackWidget.cpp:327 fromJson] [0mCreating module widget DISTRHO Text Editor
+[console] [34m[0.217 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/Plug.svg
+[console] [34m[0.217 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/PlugPort.svg
+[console] [34m[0.252 info Window.cpp:385 WindowSetPluginUI] [0mRenderer: WebKit WebKit WebGL
+[console] [34m[0.253 info Window.cpp:386 WindowSetPluginUI] [0mOpenGL: OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))
+[console] [34m[0.267 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/ComponentLibrary/Rail.svg
+[console] [34m[1.097 info CardinalCommon.cpp:764 loadSettings] [0mLoading settings
+[console] [34m[1.098 info Rack/src/settings.cpp:519 load] [0mLoading settings /home/web_user/Cardinal/mini.json
+help loaded: 66 modules of text
+VCO card bars: Frequency | Frequency modulation | Pulse width | Sync mode | Pulse width modulation | FM mode
+Audio card jacks: Left | Right |  | 
+drawer open: true · title VCO · plugin Fundamental · manual https://vcvrack.com/Fundamental#VCO
+sections: Knobs and switches, Inputs, Outputs · knob rows 6 · jack rows 8
+has description: true · has about: true · has try: true
+knob rows: Sync mode = Hard ✓text | Frequency = 130.81 Hz ✓text | Frequency modulation = 0 % ✓text | Pulse width = 50 % ✓text | Pulse width modulation = 0 % ✓text | FM mode = 1V/octave ✓text
+jack rows: 1V/octave pitch [CV] ← from SEQ 3 · CV 1 | Frequency modulation [CV] not connected | Sync [gate] not connected | Pulse width modulation [CV] not connected | Sine [audio] not connected | Triangle [audio] not connected | Sawtooth [audio] → to VCA · Channel | Square [audio] not connected
+live jack values: , , , , , , , 
+goto "← from SEQ 3 · CV 1": drawer hidden true, flashed card SEQ 3
+bar label tap: title ADSR · highlighted row Attack → Time to rise from 0 to 10 V after the gate starts. Short for
+chip buttons: What is this jack? | Cancel
+jack help: title SEQ 3 · highlighted CV 1 [CV] → to VCO · 1V/octave pitch · Row 1's value for the current step. Patch to a VCO Pitch jack for notes. · arm cleared true
+[console] [34m[16.406 info surgext/src/XTModule.h:74 showBuildInfo] [0m[SurgeXTRack] Instance: Module=FX<Nimbus> BuildInfo=os:linux surge:3313430 buildtime=Oct 15 2026 
+[console] [34m[16.581 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/surgext/res/xt/dark/panels/fx/BlankNoDisplay.svg
+[console] [34m[16.583 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/surgext/res/xt/dark/components/knob-pointer-9.svg
+[console] [34m[16.584 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/surgext/res/xt/dark/components/knob-9.svg
+[console] [34m[16.585 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/surgext/res/xt/dark/components/port.svg
+[console] [34m[16.586 info Rack/src/window/Svg.cpp:28 loadFile] [0mLoaded SVG /resources/surgext/res/xt/dark/components/mod-button.svg
+Nimbus: manual https://surge-synthesizer.github.io/rack_xt_manual/ · groups Modulation depths (48) · ungrouped knob rows 14 · note Surge XT modules have four modulation inputs and a depth knob for ever
+after undo add: modules 6, drawer hidden true
+audio: running · engine 10.9% avg / 22.6% max of real time · page frame 89.7 ms avg, 30

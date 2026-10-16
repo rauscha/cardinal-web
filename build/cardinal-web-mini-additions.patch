@@ -1,0 +1,254 @@
+diff --git a/plugins/Makefile b/plugins/Makefile
+index 2f00fa3..8e87d37 100644
+--- a/plugins/Makefile
++++ b/plugins/Makefile
+@@ -300,6 +300,8 @@ MINIPLUGIN_FILES += Fundamental/src/VCA-1.cpp
+ MINIPLUGIN_FILES += Fundamental/src/VCF.cpp
+ MINIPLUGIN_FILES += Fundamental/src/VCMixer.cpp
+ MINIPLUGIN_FILES += Fundamental/src/VCO.cpp
++MINIPLUGIN_FILES += Fundamental/src/SEQ3.cpp
++MINIPLUGIN_FILES += Fundamental/src/SequentialSwitch.cpp
+ 
+ # modules/types which are present in other plugins
+ FUNDAMENTAL_CUSTOM = $(DRWAV)
+@@ -600,6 +602,24 @@ MINIPLUGIN_FILES += BogaudioModules/src/SampleHold.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/Switch.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/Switch18.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/Unison.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/Slew.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/Switch81.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/RGate.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/AddrSeq.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/AddrSeqX.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/addressable_sequence.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/slew_common.cpp
++MINIPLUGIN_FILES += BogaudioModules/src/output_range.cpp
++# cardinal-web additions: Impromptu clock and gate sequencer
++MINIPLUGIN_FILES += ImpromptuModular/src/ImpromptuModular.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/Clocked.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/ClockedExpander.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/Clkd.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/GateSeq64.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/GateSeq64Expander.cpp
++MINIPLUGIN_FILES += ImpromptuModular/src/PhraseSeqUtil.cpp
++MINIPLUGIN_FILES += $(filter-out ImpromptuModular/src/comp/PanelTheme.cpp,$(wildcard ImpromptuModular/src/comp/*.cpp))
++MINIPLUGIN_FILES += ImpromptuModularDark/PanelTheme.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/VCA.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/VCF.cpp
+ MINIPLUGIN_FILES += BogaudioModules/src/VCO.cpp
+@@ -1523,6 +1543,7 @@ MINIPLUGIN_LIST    += AriaModules
+ MINIPLUGIN_LIST    += AudibleInstruments
+ MINIPLUGIN_LIST    += BogaudioModules
+ MINIPLUGIN_LIST    += Fundamental
++MINIPLUGIN_LIST    += ImpromptuModular
+ MINIPLUGIN_LIST    += MockbaModular
+ MINIPLUGIN_LIST    += surgext
+ # MINIPLUGIN_LIST    += ValleyAudio
+@@ -1541,8 +1562,10 @@ MINIRESOURCE_FILES += AudibleInstruments/res/Plaits.svg
+ 
+ MINIRESOURCE_FILES += BogaudioModules/res/AD-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Additator-dark.svg
+-# MINIRESOURCE_FILES += BogaudioModules/res/AddrSeq-dark.svg
+-# MINIRESOURCE_FILES += BogaudioModules/res/AddrSeqX-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/AddrSeq-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/AddrSeq.svg
++MINIRESOURCE_FILES += BogaudioModules/res/AddrSeqX-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/AddrSeqX.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/ADSR-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/AMRM-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Analyzer-dark.svg
+@@ -1631,12 +1654,14 @@ MINIRESOURCE_FILES += BogaudioModules/res/port-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Pulse-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Ranalyzer.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Reftone-dark.svg
+-# MINIRESOURCE_FILES += BogaudioModules/res/RGate-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/RGate-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/RGate.svg
+ MINIRESOURCE_FILES += BogaudioModules/res/SampleHold-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Shaper-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/ShaperPlus-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Sine-dark.svg
+-# MINIRESOURCE_FILES += BogaudioModules/res/Slew-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/Slew-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/Slew.svg
+ MINIRESOURCE_FILES += BogaudioModules/res/slider_switch_2_14px_0.svg
+ MINIRESOURCE_FILES += BogaudioModules/res/slider_switch_2_14px_1.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Stack-dark.svg
+@@ -1645,7 +1670,8 @@ MINIRESOURCE_FILES += BogaudioModules/res/Switch-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Switch1616-dark.svg
+ MINIRESOURCE_FILES += BogaudioModules/res/Switch18-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Switch44-dark.svg
+-# MINIRESOURCE_FILES += BogaudioModules/res/Switch81-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/Switch81-dark.svg
++MINIRESOURCE_FILES += BogaudioModules/res/Switch81.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Switch88-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Test-dark.svg
+ # MINIRESOURCE_FILES += BogaudioModules/res/Test2-dark.svg
+@@ -1679,6 +1705,15 @@ MINIRESOURCE_FILES += Cardinal/res/HostParamsMap.svg
+ MINIRESOURCE_FILES += Cardinal/res/HostTime.svg
+ 
+ MINIRESOURCE_FILES += Fundamental/presets
++# cardinal-web additions: Impromptu panels, components and fonts
++MINIRESOURCE_FILES += ImpromptuModular/res/panels/Clocked.svg
++MINIRESOURCE_FILES += ImpromptuModular/res/panels/ClockedExpander.svg
++MINIRESOURCE_FILES += ImpromptuModular/res/panels/Clkd.svg
++MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64.svg
++MINIRESOURCE_FILES += ImpromptuModular/res/panels/GateSeq64Expander.svg
++MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/*.svg)
++MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/comp/complib/*.svg)
++MINIRESOURCE_FILES += $(wildcard ImpromptuModular/res/fonts/*.ttf)
+ MINIRESOURCE_FILES += Fundamental/res/ADSR.svg
+ MINIRESOURCE_FILES += Fundamental/res/LFO.svg
+ MINIRESOURCE_FILES += Fundamental/res/Merge.svg
+@@ -1693,6 +1728,9 @@ MINIRESOURCE_FILES += Fundamental/res/VCA-1.svg
+ MINIRESOURCE_FILES += Fundamental/res/VCF.svg
+ MINIRESOURCE_FILES += Fundamental/res/VCMixer.svg
+ MINIRESOURCE_FILES += Fundamental/res/VCO.svg
++MINIRESOURCE_FILES += Fundamental/res/SEQ3.svg
++MINIRESOURCE_FILES += Fundamental/res/SequentialSwitch1.svg
++MINIRESOURCE_FILES += Fundamental/res/SequentialSwitch2.svg
+ MINIRESOURCE_FILES += Fundamental/res/components/ADSR-bg.svg
+ MINIRESOURCE_FILES += Fundamental/res/components/button-off.svg
+ MINIRESOURCE_FILES += Fundamental/res/components/button-on.svg
+diff --git a/plugins/plugins-mini.cpp b/plugins/plugins-mini.cpp
+index fadda3c..bd3e3b2 100644
+--- a/plugins/plugins-mini.cpp
++++ b/plugins/plugins-mini.cpp
+@@ -55,6 +55,18 @@ extern Model* modelSampleHold;
+ extern Model* modelSwitch;
+ extern Model* modelSwitch18;
+ extern Model* modelUnison;
++extern Model* modelSlew;
++extern Model* modelSwitch81;
++extern Model* modelRGate;
++extern Model* modelAddrSeq;
++extern Model* modelAddrSeqX;
++
++// ImpromptuModular (cardinal-web additions)
++extern Model* modelClocked;
++extern Model* modelClockedExpander;
++extern Model* modelClkd;
++extern Model* modelGateSeq64;
++extern Model* modelGateSeq64Expander;
+ 
+ // MockbaModular
+ #include "MockbaModular/src/plugin.hpp"
+@@ -84,6 +96,7 @@ Plugin* pluginInstance__Fundamental;
+ Plugin* pluginInstance__Aria;
+ Plugin* pluginInstance__AudibleInstruments;
+ Plugin* pluginInstance__BogaudioModules;
++extern Plugin* pluginInstance__ImpromptuModular;
+ Plugin* pluginInstance__MockbaModular;
+ Plugin* pluginInstance__surgext;
+ Plugin* pluginInstance__ValleyAudio;
+@@ -261,6 +274,9 @@ static void initStatic__Fundamental()
+         p->addModel(modelVCF);
+         p->addModel(modelVCMixer);
+         p->addModel(modelVCO);
++        p->addModel(modelSEQ3);
++        p->addModel(modelSequentialSwitch1);
++        p->addModel(modelSequentialSwitch2);
+         spl.removeModule("8vert");
+         spl.removeModule("Delay");
+         spl.removeModule("LFO2");
+@@ -268,9 +284,6 @@ static void initStatic__Fundamental()
+         spl.removeModule("Mutes");
+         spl.removeModule("Octave");
+         spl.removeModule("Pulses");
+-        spl.removeModule("SEQ3");
+-        spl.removeModule("SequentialSwitch1");
+-        spl.removeModule("SequentialSwitch2");
+         spl.removeModule("VCA");
+         spl.removeModule("VCO2");
+     }
+@@ -366,11 +379,14 @@ static void initStatic__BogaudioModules()
+         p->addModel(modelSwitch);
+         p->addModel(modelSwitch18);
+         p->addModel(modelUnison);
++        p->addModel(modelSlew);
++        p->addModel(modelSwitch81);
++        p->addModel(modelRGate);
++        p->addModel(modelAddrSeq);
++        p->addModel(modelAddrSeqX);
+ 
+         // cat plugins/BogaudioModules/plugin.json  | jq -r .modules[].slug - | sort
+         spl.removeModule("Bogaudio-Additator");
+-        spl.removeModule("Bogaudio-AddrSeq");
+-        spl.removeModule("Bogaudio-AddrSeqX");
+         spl.removeModule("Bogaudio-ADSR");
+         spl.removeModule("Bogaudio-AMRM");
+         spl.removeModule("Bogaudio-Analyzer");
+@@ -447,16 +463,13 @@ static void initStatic__BogaudioModules()
+         spl.removeModule("Bogaudio-Pulse");
+         spl.removeModule("Bogaudio-Ranalyzer");
+         spl.removeModule("Bogaudio-Reftone");
+-        spl.removeModule("Bogaudio-RGate");
+         spl.removeModule("Bogaudio-Shaper");
+         spl.removeModule("Bogaudio-ShaperPlus");
+         spl.removeModule("Bogaudio-Sine");
+-        spl.removeModule("Bogaudio-Slew");
+         spl.removeModule("Bogaudio-Stack");
+         spl.removeModule("Bogaudio-Sums");
+         spl.removeModule("Bogaudio-Switch1616");
+         spl.removeModule("Bogaudio-Switch44");
+-        spl.removeModule("Bogaudio-Switch81");
+         spl.removeModule("Bogaudio-Switch88");
+         spl.removeModule("Bogaudio-UMix");
+         spl.removeModule("Bogaudio-VCAmp");
+@@ -471,6 +484,48 @@ static void initStatic__BogaudioModules()
+     }
+ }
+ 
++static void initStatic__ImpromptuModular()
++{
++    Plugin* const p = new Plugin;
++    pluginInstance__ImpromptuModular = p;
++
++    const StaticPluginLoader spl(p, "ImpromptuModular");
++    if (spl.ok())
++    {
++        p->addModel(modelClocked);
++        p->addModel(modelClockedExpander);
++        p->addModel(modelClkd);
++        p->addModel(modelGateSeq64);
++        p->addModel(modelGateSeq64Expander);
++
++        spl.removeModule("Adaptive-Quantizer");
++        spl.removeModule("Big-Button-Seq");
++        spl.removeModule("Big-Button-Seq2");
++        spl.removeModule("Chord-Key");
++        spl.removeModule("Chord-Key-Expander");
++        spl.removeModule("Cv-Pad");
++        spl.removeModule("Foundry");
++        spl.removeModule("Foundry-Expander");
++        spl.removeModule("Four-View");
++        spl.removeModule("Hotkey");
++        spl.removeModule("Part-Gate-Split");
++        spl.removeModule("Phrase-Seq-16");
++        spl.removeModule("Phrase-Seq-32");
++        spl.removeModule("Phrase-Seq-Expander");
++        spl.removeModule("Prob-Key");
++        spl.removeModule("Semi-ModularSynth");
++        spl.removeModule("Sygen");
++        spl.removeModule("Tact");
++        spl.removeModule("Tact1");
++        spl.removeModule("TactG");
++        spl.removeModule("Twelve-Key");
++        spl.removeModule("Write-Seq-32");
++        spl.removeModule("Write-Seq-64");
++        spl.removeModule("Variations");
++        spl.removeModule("Blank-Panel");
++    }
++}
++
+ static void initStatic__MockbaModular()
+ {
+     Plugin* const p = new Plugin;
+@@ -643,6 +698,7 @@ void initStaticPlugins()
+     initStatic__Aria();
+     initStatic__AudibleInstruments();
+     initStatic__BogaudioModules();
++    initStatic__ImpromptuModular();
+     initStatic__MockbaModular();
+     initStatic__surgext();
+     /*

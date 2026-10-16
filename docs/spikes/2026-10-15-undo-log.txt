@@ -1,0 +1,11 @@
+start: cables 6 buttons [-] [-]
+after connect: cables 7 buttons [Undo connect cable] [-]
+after undo: cables 6 buttons [-] [Redo connect cable]
+after redo: cables 7 buttons [Undo connect cable] [-]
+after disconnect: cables 6 buttons [Undo disconnect cable] [-]
+after undo disconnect: cables 7
+tempo param 2.000 -> 3.400 buttons [Undo change parameter] [-]
+after undo: param 2.000 bar shows 240 bpm buttons [Undo connect cable] [Redo change parameter]
+after ctrl+shift+z: param 3.400
+after ctrl+z: param 2.000
+audio: running

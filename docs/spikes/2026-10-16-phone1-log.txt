@@ -1,0 +1,13 @@
+user-select on a jack label: none · in help body: text
+header height: 83 px · rows of buttons: 2 · debug hidden true · patch line: Untitled
+after ⋯: debug hidden false · stats: engine 5.5% avg / 9.9% max of real time · page fra · header height 249
+labels: VCO pitch "← SEQ 3 · CV 1" · VCO saw "→ VCA · Channel" · VCO sine "" (hidden: none)
+wires: 6 · lanes used x=10,18,26,34 · overlapping wires sharing a lane: 0
+press Sawtooth (connected OUT): chip "VCO › Sawtooth · drag or tap an IN to add a cable, or another OUT to move its cable there" · targets IN 19 OUT 23 · wire opacities .18,.18,.85,.18,.18,.18
+tap Sine: cables 6 → 6 · VCA input fed by: VCO · Sine · labels: sine "→ VCA · Channel" saw "" · undo: · undo: move cable
+undo: VCA fed by Sawtooth
+add second cable from Sawtooth to VCF Audio: cables 7 · saw label "→ VCA · Channel, VCF · Audio"
+chip with 2 cables: "VCO › Sawtooth · drag or tap an IN to add a cable, or another OUT to move its 2 cables there"
+moved both to Triangle: tri label "→ VCA · Channel, VCF · Audio" saw ""
+SEQ3 readout: running · watched 50
+audio: running · engine 5.1% avg / 7.3% max of real time · page frame 61.8 ms

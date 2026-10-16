@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Cardinal Web (test build)",
+  "short_name": "Cardinal Web",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "description": "Test build of a mobile shell around the Cardinal Mini modular synthesizer engine.",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

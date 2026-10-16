@@ -1,0 +1,11 @@
+cables at start: 6 [11:1>12:0 11:0>13:4 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1]
+armed: true, targets: 19, matching: 8, chip: true
+after tap-connect: 7 [11:1>12:0 11:0>13:4 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1 11:2>12:1]
+disconnect offered: true chip text: VCO ‹ Frequency modulation · drag or tap an OUT jack to connect · currently from SEQ 3
+after disconnect: 6
+drag from {"x":341,"y":602} to {"x":59,"y":250}
+after drag-connect: 7 [11:1>12:0 11:0>13:4 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1 11:13>11:2]
+auto-scroll while holding at the bottom edge: scrollY 50 -> 624; still armed after lifting on nothing: true
+after replace on VCA CV: 7 [11:1>12:0 11:0>13:4 12:2>14:1 14:0>1:0 14:0>1:1 11:13>11:2 11:2>14:0]
+armed after background tap: false
+audio: running · stats: engine 4.0% avg / 6.0% max of real time · page frame 37.9 ms avg, 83.4 ms p95 · audio running 44100 Hz, buffer 2048 · C++ UI hidden · 6 modules, 43 signals watched

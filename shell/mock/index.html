@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>Cardinal Web mock: cards and glyphs</title>
+<style>
+  :root { --bg:#111; --card:#1c1c1f; --card2:#242428; --line:#3a3a40; --text:#ececec; --muted:#9a9aa3;
+          --audio:#ffb648; --cv:#5fb3ff; --gate:#f2f2f2; --clock:#b9b9b9; --accent:#e9e9e9; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--text); font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none; }
+  header { position:sticky; top:0; z-index:5; background:rgba(17,17,17,.94); backdrop-filter:blur(6px); padding:10px 12px 8px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0 0 8px; font-size:15px; font-weight:600; letter-spacing:.2px; }
+  header h1 span { color:var(--muted); font-weight:400; }
+  .seg { display:flex; gap:4px; background:#222; border-radius:10px; padding:3px; }
+  .seg button { flex:1; border:0; background:transparent; color:var(--muted); font:inherit; font-weight:600; padding:9px 0; border-radius:8px; }
+  .seg button[aria-pressed="true"] { background:#3a3a42; color:var(--text); }
+  .legend { display:flex; flex-wrap:wrap; gap:10px 14px; padding:8px 12px; color:var(--muted); font-size:12.5px; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  main { position:relative; padding:4px 12px 90px 44px; max-width:560px; }
+  #wires { position:absolute; left:0; top:0; width:44px; height:100%; pointer-events:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; margin:12px 0; overflow:hidden; }
+  .card .hd { display:flex; align-items:baseline; gap:10px; padding:12px 14px 6px; }
+  .card .hd h2 { margin:0; font-size:17px; font-weight:700; }
+  .card .hd .what { color:var(--muted); font-size:13px; flex:1; }
+  .card .hd .help { border:1px solid var(--line); background:#2a2a30; color:var(--text); border-radius:50%; width:30px; height:30px; font-weight:700; }
+  .ctl { padding:6px 14px; }
+  .bar { display:grid; grid-template-columns:86px 1fr 64px; align-items:center; gap:10px; padding:7px 0; }
+  .bar label { color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+  .bar .track { position:relative; height:34px; background:#2b2b31; border-radius:8px; touch-action:none; }
+  .bar .fill { position:absolute; left:0; top:0; bottom:0; width:40%; background:#4a4a55; border-radius:8px; }
+  .bar .knob { position:absolute; top:4px; bottom:4px; width:6px; margin-left:-3px; background:var(--accent); border-radius:3px; }
+  .bar .val { text-align:right; font-variant-numeric:tabular-nums; font-size:14px; }
+  .more { color:var(--muted); font-size:13px; padding:4px 14px 10px; }
+  .ports { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; padding:8px 14px 14px; border-top:1px solid var(--line); background:var(--card2); }
+  .ports .col h3 { margin:0 0 4px; font-size:11px; letter-spacing:.6px; color:var(--muted); font-weight:600; }
+  .jack { display:flex; align-items:center; gap:8px; padding:7px 0; font-size:14px; }
+  .jack.out { justify-content:flex-end; text-align:right; }
+  .jack svg { width:22px; height:22px; flex:none; }
+  .jack small { color:var(--muted); font-size:12px; }
+  .run { border:0; border-radius:10px; padding:12px 16px; font:inherit; font-weight:700; background:#3a3a42; color:var(--text); }
+  .run[aria-pressed="true"] { background:var(--accent); color:#111; }
+  /* glyph skin */
+  .glyph .pic { display:block; width:100%; height:120px; background:#141417; }
+  .glyph .ctl { padding-top:8px; }
+  .steps { display:grid; grid-template-columns:repeat(8,1fr); gap:5px; padding:8px 14px 2px; }
+  .steps div { height:64px; border-radius:7px; background:#2b2b31; position:relative; overflow:hidden; }
+  .steps div i { position:absolute; left:0; right:0; bottom:0; background:#4a4a55; }
+  .steps div.on i { background:#9a9aa8; }
+  .steps div b { position:absolute; left:0; right:0; bottom:4px; text-align:center; font-size:11px; color:var(--text); font-weight:600; }
+  .hidden { display:none; }
+  @media (orientation: landscape) and (min-width: 700px) {
+    main { max-width:none; display:flex; gap:12px; overflow-x:auto; padding-left:12px; }
+    .card { flex:0 0 330px; margin:12px 0; }
+    #wires { width:100%; left:0; }
+  }
+  footer { position:fixed; left:0; right:0; bottom:0; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:rgba(17,17,17,.94); border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cardinal Web mock <span>· startup patch, no engine, nothing makes sound</span></h1>
+  <div class="seg" role="tablist">
+    <button id="tab-cards" role="tab" aria-pressed="true">Cards</button>
+    <button id="tab-glyphs" role="tab" aria-pressed="false">Live glyphs</button>
+  </div>
+</header>
+<div class="legend">
+  <span><svg width="16" height="16" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="var(--audio)"/></svg>audio</span>
+  <span><svg width="16" height="16" viewBox="0 0 22 22"><circle cx="11" cy="11" r="7.5" fill="none" stroke="var(--cv)" stroke-width="3"/></svg>pitch / CV</span>
+  <span><svg width="16" height="16" viewBox="0 0 22 22"><rect x="3.5" y="3.5" width="15" height="15" rx="3" fill="var(--gate)"/></svg>gate / trigger</span>
+  <span><svg width="16" height="16" viewBox="0 0 22 22"><polygon points="11,2 20,11 11,20 2,11" fill="var(--clock)"/></svg>clock</span>
+</div>
+<main id="main"><svg id="wires"></svg></main>
+<footer>Drag the bars. Hold a module title for its menu (not wired in this mock). Shapes code signal type; colour is secondary.</footer>
+<script>
+const J = {
+  audio: '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="var(--audio)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
+  cv:    '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="none" stroke="var(--cv)" stroke-width="3"/><circle cx="11" cy="11" r="3" fill="var(--cv)"/></svg>',
+  gate:  '<svg viewBox="0 0 22 22"><rect x="2.5" y="2.5" width="17" height="17" rx="3.5" fill="var(--gate)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
+  clock: '<svg viewBox="0 0 22 22"><polygon points="11,1.5 20.5,11 11,20.5 1.5,11" fill="var(--clock)"/><circle cx="11" cy="11" r="3.2" fill="#111"/></svg>',
+};
+// the startup patch, in signal order
+const MODULES = [
+  { id:'seq', name:'SEQ 3', what:'8-step sequencer: plays a note and a trigger per step',
+    ctl:[['Tempo',0.5,'120 bpm'],['Steps',1,'8']],
+    more:'CV rows 2 and 3, gate per step, clock in/out, reset',
+    ins:[['Clock','clock'],['Reset','gate'],['Run','gate']], outs:[['CV 1','cv'],['Trig','gate'],['Clock','clock']] },
+  { id:'vco', name:'VCO', what:'oscillator: the raw tone, pitched by CV',
+    ctl:[['Freq',0.42,'C3'],['Fine',0.5,'0 ct'],['PW',0.5,'50 %']],
+    more:'FM depth, sync, analog/digital mode',
+    ins:[['V/Oct','cv'],['FM','cv'],['Sync','gate']], outs:[['Saw','audio'],['Sine','audio'],['Square','audio']] },
+  { id:'adsr', name:'ADSR', what:'envelope: shapes each note from the trigger',
+    ctl:[['Attack',0.12,'10 ms'],['Decay',0.45,'300 ms'],['Sustain',0.35,'35 %'],['Release',0.5,'500 ms']],
+    more:'CV in per stage, retrigger',
+    ins:[['Gate','gate'],['Retrig','gate']], outs:[['Env','cv']] },
+  { id:'vca', name:'VCA', what:'amplifier: the envelope opens and closes the sound',
+    ctl:[['Level',1,'100 %']],
+    more:'exponential response switch',
+    ins:[['In','audio'],['CV','cv']], outs:[['Out','audio']] },
+  { id:'out', name:'Audio', what:'to the phone speaker or headphones',
+    ctl:[['Level',0.8,'0 dB']], more:'',
+    ins:[['Left','audio'],['Right','audio']], outs:[] },
+];
+const CABLES = [ ['seq','CV 1','vco','V/Oct','cv'], ['seq','Trig','adsr','Gate','gate'], ['vco','Saw','vca','In','audio'],
+                 ['adsr','Env','vca','CV','cv'], ['vca','Out','out','Left','audio'], ['vca','Out','out','Right','audio'] ];
+const COLORS = { audio:'var(--audio)', cv:'var(--cv)', gate:'var(--gate)', clock:'var(--clock)' };
+const state = {}; MODULES.forEach(m => m.ctl.forEach(c => state[m.id + ':' + c[0]] = c[1]));
+let skin = 'cards', running = true;
+
+function bar(mid, [label, v, text]) {
+  const key = mid + ':' + label, val = state[key];
+  return `<div class="bar" data-key="${key}"><label>${label}</label>
+    <div class="track"><div class="fill" style="width:${val*100}%"></div><div class="knob" style="left:${val*100}%"></div></div>
+    <div class="val">${text}</div></div>`;
+}
+function jacks(m) {
+  const ins = m.ins.map(([n,t]) => `<div class="jack" data-mod="${m.id}" data-port="${n}">${J[t]}<span>${n}</span></div>`).join('');
+  const outs = m.outs.map(([n,t]) => `<div class="jack out" data-mod="${m.id}" data-port="${n}"><span>${n}</span>${J[t]}</div>`).join('');
+  return `<div class="ports"><div class="col"><h3>IN</h3>${ins}</div><div class="col"><h3>OUT</h3>${outs || '<div class="jack"><small>none</small></div>'}</div></div>`;
+}
+function head(m) { return `<div class="hd"><h2>${m.name}</h2><div class="what">${m.what}</div><button class="help" aria-label="About ${m.name}">?</button></div>`; }
+
+function renderCards() {
+  return MODULES.map(m => `<section class="card" id="card-${m.id}">${head(m)}
+    <div class="ctl">${m.id==='seq' ? `<div class="bar"><label>Run</label><button class="run" id="run-${skin}" aria-pressed="${running}">${running?'RUNNING':'STOPPED'}</button><div></div></div>` : ''}${m.ctl.map(c => bar(m.id, c)).join('')}</div>
+    ${m.more ? `<div class="more">More: ${m.more}</div>` : ''}${jacks(m)}</section>`).join('');
+}
+function renderGlyphs() {
+  return MODULES.map(m => {
+    let body = '';
+    if (m.id === 'seq') body = `<div class="steps" id="steps">${[0,4,7,12,16,19,24,19].map((n,i) => `<div class="on" data-i="${i}"><i style="height:${20 + n*1.7}px"></i><b>${['C','E','G','C','E','G','C','G'][i]}</b></div>`).join('')}</div>
+      <div class="ctl"><div class="bar"><label>Run</label><button class="run" id="run-${skin}" aria-pressed="${running}">${running?'RUNNING':'STOPPED'}</button><div></div></div>${bar('seq', m.ctl[0])}</div>`;
+    else body = `<canvas class="pic" id="pic-${m.id}" width="660" height="240"></canvas><div class="ctl">${m.ctl.slice(0, m.id==='adsr'?4:1).map(c => bar(m.id, c)).join('')}</div>`;
+    return `<section class="card glyph" id="card-${m.id}">${head(m)}${body}${jacks(m)}</section>`;
+  }).join('');
+}
+function render() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<svg id="wires"></svg>' + (skin === 'cards' ? renderCards() : renderGlyphs());
+  document.getElementById('tab-cards').setAttribute('aria-pressed', skin === 'cards');
+  document.getElementById('tab-glyphs').setAttribute('aria-pressed', skin === 'glyphs');
+  const run = document.getElementById('run-' + skin);
+  if (run) run.onclick = () => { running = !running; run.setAttribute('aria-pressed', running); run.textContent = running ? 'RUNNING' : 'STOPPED'; };
+  requestAnimationFrame(drawWires);
+}
+// wires: portrait draws a transit map in the left margin; landscape draws
+// Rack-style curves from each OUT jack to its IN jack across the cards.
+function drawWires() {
+  const svg = document.getElementById('wires'); if (!svg) return;
+  const main = document.getElementById('main'); const mainRect = main.getBoundingClientRect();
+  const landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches;
+  svg.setAttribute('height', main.scrollHeight); svg.setAttribute('width', landscape ? main.scrollWidth : 44);
+  svg.style.width = landscape ? main.scrollWidth + 'px' : '44px';
+  let html = '';
+  CABLES.forEach(([om, op, im, ip, type], k) => {
+    const a = document.querySelector(`.jack[data-mod="${om}"][data-port="${op}"] svg`), b = document.querySelector(`.jack[data-mod="${im}"][data-port="${ip}"] svg`);
+    if (!a || !b) return;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); const c = COLORS[type];
+    if (landscape) {
+      const x1 = ra.left + ra.width/2 - mainRect.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mainRect.top + main.scrollTop;
+      const x2 = rb.left + rb.width/2 - mainRect.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mainRect.top + main.scrollTop;
+      const sag = 40 + k * 6, dx = Math.max(60, (x2 - x1) * 0.4);
+      html += `<path d="M${x1} ${y1} C${x1 + dx} ${y1 + sag}, ${x2 - dx} ${y2 + sag}, ${x2} ${y2}" stroke="${c}" stroke-width="3" fill="none" opacity=".8"/>
+               <circle cx="${x1}" cy="${y1}" r="5" fill="${c}"/><circle cx="${x2}" cy="${y2}" r="5" fill="${c}"/>`;
+    } else {
+      const y1 = ra.top + ra.height/2 - mainRect.top, y2 = rb.top + rb.height/2 - mainRect.top; const x = 10 + (k % 4) * 8;
+      html += `<path d="M${x} ${y1} V${y2}" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <path d="M${x} ${y1} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <path d="M${x} ${y2} H40" stroke="${c}" stroke-width="2.5" fill="none" opacity=".85"/>
+               <circle cx="${x}" cy="${y1}" r="4" fill="${c}"/><circle cx="${x}" cy="${y2}" r="4" fill="${c}"/>`;
+    }
+  });
+  svg.innerHTML = html;
+}
+// bars: drag anywhere on the track
+document.addEventListener('pointerdown', e => {
+  const track = e.target.closest('.track'); if (!track) return;
+  const barEl = track.closest('.bar'), key = barEl.dataset.key; track.setPointerCapture(e.pointerId);
+  const move = ev => { const r = track.getBoundingClientRect(); const v = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); state[key] = v;
+    track.querySelector('.fill').style.width = (v*100) + '%'; track.querySelector('.knob').style.left = (v*100) + '%';
+    const [mid, label] = key.split(':'); barEl.querySelector('.val').textContent = fmt(mid, label, v); };
+  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; };
+});
+function fmt(mid, label, v) {
+  if (label === 'Tempo') return Math.round(30 + v * 210) + ' bpm';
+  if (label === 'Freq') return ['C2','G2','C3','E3','G3','C4','E4','G4','C5'][Math.round(v*8)];
+  if (label === 'Fine') return Math.round((v-0.5)*200) + ' ct';
+  if (label === 'PW' || label === 'Sustain') return Math.round(v*100) + ' %';
+  if (label === 'Level') return mid === 'out' ? (Math.round((v-0.8)*30)) + ' dB' : Math.round(v*100) + ' %';
+  if (label === 'Steps') return String(1 + Math.round(v*7));
+  return Math.round(Math.pow(1000, v) * 10) + ' ms';
+}
+// live glyphs (simulated, in time with a 120 bpm 8-step cycle)
+let t0 = performance.now();
+function env(ph) { const a = 0.06, d = 0.3, s = 0.35; if (ph < a) return ph / a; if (ph < a + d) return 1 - (1 - s) * (ph - a) / d; if (ph < 0.75) return s; return s * Math.max(0, 1 - (ph - 0.75) / 0.25); }
+function tick(now) {
+  if (skin === 'glyphs') {
+    const beat = (now - t0) / 1000 * 4; const step = running ? Math.floor(beat) % 8 : -1; const ph = running ? beat % 1 : 0;
+    document.querySelectorAll('#steps div').forEach((d, i) => d.style.outline = i === step ? '2px solid var(--accent)' : 'none');
+    const e = running ? env(ph) : 0;
+    draw('vco', (ctx, w, h) => { ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--audio'); ctx.lineWidth = 3; ctx.beginPath();
+      const freq = 2 + Math.round(state['vco:Freq'] * 8); for (let x = 0; x < w; x++) { const p = ((x / w) * freq + (running ? now / 400 : 0)) % 1; const y = h / 2 - (p * 2 - 1) * h * 0.38 * (0.3 + 0.7 * e); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); });
+    draw('adsr', (ctx, w, h) => { ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--cv'); ctx.lineWidth = 3; ctx.beginPath();
+      for (let x = 0; x <= w; x += 2) { const y = h - 12 - env(x / w) * (h - 24); x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+      if (running) { ctx.fillStyle = '#ececec'; ctx.beginPath(); ctx.arc(ph * w, h - 12 - env(ph) * (h - 24), 7, 0, 7); ctx.fill(); } });
+    draw('vca', (ctx, w, h) => { ctx.fillStyle = '#2b2b31'; ctx.fillRect(20, h/2 - 22, w - 40, 44); ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--audio'); ctx.fillRect(20, h/2 - 22, (w - 40) * e * state['vca:Level'], 44);
+      ctx.fillStyle = '#9a9aa3'; ctx.font = '22px system-ui'; ctx.fillText('envelope × level = loudness', 20, h/2 + 52); });
+    draw('out', (ctx, w, h) => { const lv = e * state['vca:Level']; for (const [i, y] of [[0, h/2 - 30], [1, h/2 + 6]]) { ctx.fillStyle = '#2b2b31'; ctx.fillRect(20, y, w - 40, 24); ctx.fillStyle = lv > 0.9 ? '#ffffff' : getComputedStyle(document.body).getPropertyValue('--audio'); ctx.fillRect(20, y, (w - 40) * lv, 24); } });
+  }
+  requestAnimationFrame(tick);
+}
+function draw(id, fn) { const c = document.getElementById('pic-' + id); if (!c) return; const ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); fn(ctx, c.width, c.height); }
+document.getElementById('tab-cards').onclick = () => { skin = 'cards'; render(); };
+document.getElementById('tab-glyphs').onclick = () => { skin = 'glyphs'; render(); };
+window.addEventListener('resize', () => requestAnimationFrame(drawWires));
+window.addEventListener('orientationchange', () => setTimeout(drawWires, 300));
+render(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+{
+ "version": "2.4.1",
+ "zoom": 0.5,
+ "gridOffset": [
+  0,
+  0
+ ],
+ "modules": [
+  {
+   "id": 1000,
+   "plugin": "ImpromptuModular",
+   "model": "Clocked",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    0,
+    0
+   ]
+  },
+  {
+   "id": 1001,
+   "plugin": "ImpromptuModular",
+   "model": "Clocked-Clkd",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    32,
+    0
+   ]
+  },
+  {
+   "id": 1002,
+   "plugin": "ImpromptuModular",
+   "model": "Gate-Seq-64",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    64,
+    0
+   ]
+  },
+  {
+   "id": 1003,
+   "plugin": "Fundamental",
+   "model": "SEQ3",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    96,
+    0
+   ]
+  },
+  {
+   "id": 1004,
+   "plugin": "Fundamental",
+   "model": "SequentialSwitch1",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    128,
+    0
+   ]
+  },
+  {
+   "id": 1005,
+   "plugin": "Fundamental",
+   "model": "SequentialSwitch2",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    160,
+    0
+   ]
+  },
+  {
+   "id": 1006,
+   "plugin": "Bogaudio",
+   "model": "Bogaudio-Slew",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    192,
+    0
+   ]
+  },
+  {
+   "id": 1007,
+   "plugin": "Bogaudio",
+   "model": "Bogaudio-Switch81",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    224,
+    0
+   ]
+  },
+  {
+   "id": 1008,
+   "plugin": "Bogaudio",
+   "model": "Bogaudio-RGate",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    256,
+    0
+   ]
+  },
+  {
+   "id": 1009,
+   "plugin": "Bogaudio",
+   "model": "Bogaudio-AddrSeq",
+   "version": "2.0.0",
+   "params": [],
+   "pos": [
+    288,
+    0
+   ]
+  }
+ ],
+ "cables": []
+}

@@ -1,0 +1,14 @@
+alignment before: {"jackY":2042,"wireY":40}
+alignment after opening VCO More: {"jackY":2272,"wireY":40}
+start: 11:0>13:4 11:1>12:0 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1
+holding: armed=j-11-o1 targets=41 chip=Holding the cable from SEQ 3 › CV 1 → VCO › 1V/octave pitchd
+after moving IN end to FM: 11:0>13:4 11:1>12:1 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1 | Undo move cable
+after re-sourcing to CV 3: 11:0>13:4 11:3>12:1 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1 | Undo move cable
+after two undos: 11:0>13:4 11:1>12:0 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1
+tapped cable: chip=SEQ 3 › CV 1 → VCO › 1V/octave pitch buttons=Move OUT end/Move IN end/Disconnect/Cancel
+moving OUT end: targets=oooooooooooooooooooooooo
+after moving OUT end to CV 2: 11:0>13:4 11:2>12:0 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1 | Undo move cable
+after replace on VCA CV: 11:0>13:4 11:1>14:0 11:2>12:0 12:2>14:1 14:0>1:0 14:0>1:1 | Undo replace cable
+after undo replace: 11:0>13:4 11:2>12:0 12:2>14:1 13:0>14:0 14:0>1:0 14:0>1:1
+press busy OUT: chip=VCA › Channel · drag or tap an IN jack to connect · 2 cables already here, tap one to move it
+audio: running
