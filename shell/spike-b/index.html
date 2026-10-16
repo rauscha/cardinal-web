@@ -17,6 +17,13 @@
   .btn.primary { background:var(--accent); color:#111; border-color:var(--accent); }
   .btn:disabled { opacity:.4; }
   .card.flash { box-shadow:0 0 0 3px var(--accent); }
+  #patchname { margin-top:8px; font-size:13.5px; } #patchname span { color:var(--muted); font-size:12.5px; }
+  .plist { padding:6px 0 calc(16px + env(safe-area-inset-bottom)); overflow-y:auto; flex:1; }
+  .prow { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid #26262b; }
+  .prow .pn { flex:1; min-width:0; } .prow .pn b { display:block; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .prow .pn span { color:var(--muted); font-size:12px; }
+  .prow button { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:7px 10px; border-radius:8px; }
+  .prow button.danger { background:#5a2a2a; }
+  .sheet-actions { display:flex; gap:8px; flex-wrap:wrap; padding:10px 12px; border-bottom:1px solid var(--line); }
   #stats { font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:6px; line-height:1.5; }
   #stats b { color:var(--text); font-weight:600; }
   main { position:relative; padding:4px 12px 40px 44px; max-width:560px; }
@@ -54,6 +61,8 @@
   .jack.out.connected::after { right:auto; left:4px; }
   #sheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
   #sheet[hidden] { display:none; }
+  #psheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
+  #psheet[hidden] { display:none; }
   .sheet-hd { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
   .sheet-hd input { flex:1; font:inherit; font-size:16px; padding:9px 12px; border-radius:9px; border:1px solid var(--line); background:#2b2b31; color:var(--text); }
   .tags { display:flex; gap:6px; overflow-x:auto; padding:8px 12px; border-bottom:1px solid var(--line); }
@@ -98,9 +107,12 @@
     <button class="btn" id="latency">Latency test</button>
     <button class="btn" id="reload">Reload startup patch</button>
     <button class="btn" id="add">Add module</button>
+    <button class="btn" id="save">Save</button>
+    <button class="btn" id="patches">Patches</button>
     <button class="btn" id="undo" disabled>Undo</button>
     <button class="btn" id="redo" disabled>Redo</button>
   </div>
+  <div id="patchname"><b id="pname">Untitled</b> <span id="psaved"></span></div>
   <div id="stats">loading engine…</div>
 </header>
 <div id="boot">Loading the engine (about 10 MB). The page builds its cards from the engine's own module list.</div>
@@ -109,6 +121,11 @@
   <div class="sheet-hd"><input id="sheet-q" type="search" placeholder="Search modules" autocomplete="off"><button class="btn" id="sheet-close">Close</button></div>
   <div id="sheet-tags" class="tags"></div>
   <div id="sheet-list"></div>
+</div>
+<div id="psheet" hidden>
+  <div class="sheet-hd"><input id="psheet-name" type="text" placeholder="Patch name" autocomplete="off"><button class="btn primary" id="psheet-save">Save as</button><button class="btn" id="psheet-close">Close</button></div>
+  <div class="sheet-actions"><button class="btn" id="p-download">Download .vcv</button><button class="btn" id="p-share">Share</button><button class="btn" id="p-import">Import file</button><button class="btn" id="p-new">New patch</button><input type="file" id="p-file" accept=".vcv,.json,application/json,text/plain" hidden></div>
+  <div class="plist" id="plist"></div>
 </div>
 <svg id="ghost"></svg>
 <div id="chip"><div class="t"></div><button id="chip-disconnect" class="danger">Disconnect</button><button id="chip-cancel">Cancel</button></div>
@@ -153,6 +170,7 @@ function bootBridge() {
     removeCable: Module.cwrap('cardinalweb_remove_cable', 'number', ['number']),
     moveCable: Module.cwrap('cardinalweb_move_cable', 'number', ['number', 'number', 'number', 'number', 'number']),
     modelsJson: Module.cwrap('cardinalweb_get_models_json', 'string', []),
+    patchJson: Module.cwrap('cardinalweb_get_patch_json', 'string', []),
     addModule: Module.cwrap('cardinalweb_add_module', 'number', ['string', 'string']),
     removeModule: Module.cwrap('cardinalweb_remove_module', 'number', ['number']),
     paramCommit: Module.cwrap('cardinalweb_param_commit', null, ['number', 'number', 'number', 'number']),
@@ -164,6 +182,7 @@ function bootBridge() {
   document.getElementById('boot').remove();
   rebuild();
   requestAnimationFrame(frame);
+  setTimeout(offerRestore, 800);
 }
 function rebuild() {
   mods = JSON.parse(B.modulesJson()); cables = JSON.parse(B.cablesJson());
@@ -229,7 +248,7 @@ function dropOn(t) { // finish the armed action on target jack t
     if (t.dataset.k === 'i') { inM = +t.dataset.m; inP = +t.dataset.p; } else { outM = +t.dataset.m; outP = +t.dataset.p; }
     B.moveCable(c.id, outM, outP, inM, inP); }
   else { var out = a.el.dataset.k === 'o' ? a.el : t, inp = a.el.dataset.k === 'o' ? t : a.el; B.addCable(+out.dataset.m, +out.dataset.p, +inp.dataset.m, +inp.dataset.p); }
-  clearArm(); refreshCables(); updateUndo(); t.classList.add('hover'); setTimeout(() => t.classList.remove('hover'), 350);
+  clearArm(); refreshCables(); updateUndo(); touched(); t.classList.add('hover'); setTimeout(() => t.classList.remove('hover'), 350);
 }
 function clearGhost() { document.getElementById('ghost').innerHTML = ''; }
 function drawGhost(x, y) { if (!arm || !arm.el) return; var r = arm.el.querySelector('svg').getBoundingClientRect(); var x1 = r.left + r.width/2, y1 = r.top + r.height/2; var col = COLORS[arm.type] || '#fff';
@@ -259,7 +278,7 @@ function endDrag(e) { if (!drag || e.pointerId !== drag.id) return; var d = drag
   if (d.moved && under && under.classList.contains('target')) dropOn(under); }
 document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
 document.getElementById('chip-cancel').onclick = clearArm;
-document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.cable) { B.removeCable(arm.cable.id); clearArm(); refreshCables(); updateUndo(); } };
+document.getElementById('chip-disconnect').onclick = () => { if (arm && arm.cable) { B.removeCable(arm.cable.id); clearArm(); refreshCables(); updateUndo(); touched(); } };
 // ---------- cards
 var J = {
   audio: '<svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="var(--audio)"/><circle cx="11" cy="11" r="3.5" fill="#111"/></svg>',
@@ -303,10 +322,10 @@ document.addEventListener('pointerdown', e => {
   var move = ev => { var r = track.getBoundingClientRect(); var f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); var v = p.min + f * (p.max - p.min); if (p.snap) v = Math.round(v);
     B.setParam(mid, pid, v); p.value = v; var ff = (v - p.min) / (p.max - p.min || 1);
     track.querySelector('.fill').style.width = (ff*100) + '%'; track.querySelector('.knob').style.left = (ff*100) + '%'; p.display = B.paramDisplay(mid, pid); el.querySelector('.val').textContent = disp(p); };
-  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; B.paramCommit(mid, pid, startValue, B.getParam(mid, pid)); updateUndo(); };
+  move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; B.paramCommit(mid, pid, startValue, B.getParam(mid, pid)); updateUndo(); touched(); };
 });
 function updateUndo() { var u = document.getElementById('undo'), r = document.getElementById('redo'); u.disabled = !B.canUndo(); r.disabled = !B.canRedo(); u.textContent = B.canUndo() ? 'Undo ' + B.undoName() : 'Undo'; r.textContent = B.canRedo() ? 'Redo ' + B.redoName() : 'Redo'; }
-function afterHistory() { var n = JSON.parse(B.modulesJson()).length; if (n !== mods.length) rebuild(); else refreshCables(); lastParamPoll = 0; updateUndo(); }
+function afterHistory() { var n = JSON.parse(B.modulesJson()).length; if (n !== mods.length) rebuild(); else refreshCables(); lastParamPoll = 0; updateUndo(); touched(); }
 document.getElementById('undo').onclick = () => { if (B && B.undo()) afterHistory(); };
 document.getElementById('redo').onclick = () => { if (B && B.redo()) afterHistory(); };
 document.addEventListener('keydown', e => { if (!B) return; var z = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'; if (!z) return; e.preventDefault(); if (e.shiftKey ? B.redo() : B.undo()) afterHistory(); });
@@ -388,9 +407,46 @@ document.getElementById('sheet-q').oninput = renderSheet;
 document.getElementById('sheet-tags').addEventListener('click', e => { var b = e.target.closest('button[data-tag]'); if (!b) return; sheetTag = b.dataset.tag; openSheet(); });
 document.getElementById('sheet-list').addEventListener('click', e => { var b = e.target.closest('.model[data-model]'); if (!b) return;
   var id = B.addModule(b.dataset.plugin, b.dataset.model); document.getElementById('sheet').hidden = true; if (id < 0) return;
-  rebuild(); updateUndo(); var card = document.getElementById('card-' + id); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 900); } });
+  rebuild(); updateUndo(); touched(); var card = document.getElementById('card-' + id); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 900); } });
 document.addEventListener('click', e => { var b = e.target.closest('button[data-remove]'); if (!b || !B) return; var m = mods.find(x => x.id === +b.dataset.remove); if (!m) return;
-  showChip('Remove <b>' + esc(m.name) + '</b> and its cables? Undo brings it back.', false, [['Remove', () => { B.removeModule(m.id); hideChip(); rebuild(); updateUndo(); }]]); });
+  showChip('Remove <b>' + esc(m.name) + '</b> and its cables? Undo brings it back.', false, [['Remove', () => { B.removeModule(m.id); hideChip(); rebuild(); updateUndo(); touched(); }]]); });
+// ---------- saving: autosave to IndexedDB on every change, a named library, file export and import
+var DB = { open() { return new Promise((res, rej) => { var r = indexedDB.open('cardinalweb', 1); r.onupgradeneeded = () => r.result.createObjectStore('patches', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(rec) { var db = await this.open(); return new Promise((res, rej) => { var t = db.transaction('patches', 'readwrite'); t.objectStore('patches').put(rec); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+  async get(id) { var db = await this.open(); return new Promise((res, rej) => { var r = db.transaction('patches').objectStore('patches').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async all() { var db = await this.open(); return new Promise((res, rej) => { var r = db.transaction('patches').objectStore('patches').getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); },
+  async del(id) { var db = await this.open(); return new Promise((res, rej) => { var t = db.transaction('patches', 'readwrite'); t.objectStore('patches').delete(id); t.oncomplete = res; t.onerror = () => rej(t.error); }); } };
+var patch = { name: 'Untitled', id: null, savedJson: null }, autosaveTimer = 0;
+function patchJson() { return B.patchJson(); }
+function setPatchName(n, id) { patch.name = n || 'Untitled'; patch.id = id || null; document.getElementById('pname').textContent = patch.name; }
+function markSaved(when) { document.getElementById('psaved').textContent = when ? '· saved ' + new Date(when).toLocaleTimeString() : '· unsaved changes'; }
+function touched() { if (!B) return; clearTimeout(autosaveTimer); autosaveTimer = setTimeout(autosave, 800); if (patch.id) markSaved(null); }
+async function autosave() { try { await DB.put({ id: 'autosave', name: patch.name, ofId: patch.id, json: patchJson(), when: Date.now() }); } catch (e) { console.warn('autosave failed', e); } }
+async function saveAs(name) { name = (name || '').trim() || patch.name || 'Untitled'; var id = patch.id && patch.name === name ? patch.id : 'p-' + Date.now().toString(36);
+  try { await DB.put({ id, name, json: patchJson(), when: Date.now() }); setPatchName(name, id); markSaved(Date.now()); await autosave(); renderPatches(); } catch (e) { alert('Could not save: ' + e); } }
+async function loadRecord(rec) { if (!B.loadPatch(rec.json)) { alert('Could not load that patch.'); return; } setPatchName(rec.name, rec.id && rec.id !== 'autosave' ? rec.id : rec.ofId || null); markSaved(rec.when); setTimeout(() => { rebuild(); updateUndo(); }, 200); }
+async function renderPatches() { var list = (await DB.all()).filter(r => r.id !== 'autosave').sort((a, b) => b.when - a.when);
+  document.getElementById('plist').innerHTML = list.map(r => '<div class="prow" data-id="' + r.id + '"><div class="pn"><b>' + esc(r.name) + '</b><span>' + new Date(r.when).toLocaleString() + ' · ' + Math.round(r.json.length / 1024) + ' KB</span></div><button data-act="load">Load</button><button data-act="download">File</button><button data-act="delete" class="danger">Delete</button></div>').join('') || '<div class="prow"><div class="pn"><span>No saved patches yet. Type a name and tap Save as.</span></div></div>'; }
+function downloadJson(name, json) { var blob = new Blob([json], { type: 'application/json' }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (name || 'patch').replace(/[^\w.-]+/g, '_') + '.vcv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+async function sharePatch() { var json = patchJson(), file = new File([json], (patch.name || 'patch').replace(/[^\w.-]+/g, '_') + '.vcv', { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: patch.name }); return; } catch (e) { if (e.name === 'AbortError') return; } } downloadJson(patch.name, json); }
+document.getElementById('save').onclick = () => { if (!B) return; if (patch.id) saveAs(patch.name); else { openPatches(); document.getElementById('psheet-name').focus(); } };
+function openPatches() { document.getElementById('psheet').hidden = false; document.getElementById('psheet-name').value = patch.name === 'Untitled' ? '' : patch.name; renderPatches(); }
+document.getElementById('patches').onclick = openPatches;
+document.getElementById('psheet-close').onclick = () => document.getElementById('psheet').hidden = true;
+document.getElementById('psheet-save').onclick = () => { if (!B) return; saveAs(document.getElementById('psheet-name').value); };
+document.getElementById('p-download').onclick = () => { if (B) downloadJson(patch.name, patchJson()); };
+document.getElementById('p-share').onclick = () => { if (B) sharePatch(); };
+document.getElementById('p-import').onclick = () => document.getElementById('p-file').click();
+document.getElementById('p-file').onchange = async e => { var f = e.target.files[0]; if (!f || !B) return; var text = await f.text(); await loadRecord({ name: f.name.replace(/\.(vcv|json)$/i, ''), json: text, when: Date.now() }); document.getElementById('psheet').hidden = true; e.target.value = ''; };
+document.getElementById('p-new').onclick = () => { if (!B) return; fetch('../startup.vcv').then(r => r.text()).then(t => { B.loadPatch(t); setPatchName('Untitled', null); markSaved(null); setTimeout(() => { rebuild(); updateUndo(); autosave(); }, 200); document.getElementById('psheet').hidden = true; }); };
+document.getElementById('plist').addEventListener('click', async e => { var b = e.target.closest('button[data-act]'); if (!b) return; var id = b.closest('.prow').dataset.id; var rec = await DB.get(id); if (!rec) return;
+  if (b.dataset.act === 'load') { await loadRecord(rec); document.getElementById('psheet').hidden = true; }
+  else if (b.dataset.act === 'download') downloadJson(rec.name, rec.json);
+  else if (b.dataset.act === 'delete') { await DB.del(id); if (patch.id === id) setPatchName(patch.name, null); renderPatches(); } });
+async function offerRestore() { try { var a = await DB.get('autosave'); if (!a || !a.json) return; var cur = patchJson(); if (a.json === cur) return;
+  showChip('Unsaved work from <b>' + new Date(a.when).toLocaleString() + '</b>' + (a.name && a.name !== 'Untitled' ? ' (' + esc(a.name) + ')' : '') + '. Restore it?', false, [['Restore', async () => { hideChip(); await loadRecord(a); }], ['Keep this', () => { hideChip(); autosave(); }]]); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && B) { clearTimeout(autosaveTimer); autosave(); } });
 // ---------- buttons
 document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio running'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
 document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };

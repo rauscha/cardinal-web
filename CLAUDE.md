@@ -49,8 +49,10 @@ or lift-scroll-tap; cards never move; wires follow layout changes. Engine CPU ab
 4 % either way; param-to-engine 38 ms. Undo/redo use Rack's history
 (cables, parameter gestures, module add/remove). Modules are added from a
 searchable sheet (`cardinalweb_get_models_json`, `add_module`,
-`remove_module`). Not yet built: saving, custom displays, audio-rate
-readout, help drawer. The stock canvas stays as
+`remove_module`). Saving: autosave to IndexedDB with a restore offer,
+named library, `.vcv` download/share/import, all page-side (docs/12 §10).
+Not yet built: custom displays, audio-rate readout, help drawer, service
+worker and install manifest for this surface. The stock canvas stays as
 the fallback view in the same build. `CardinalMini_dsp.wasm` is the LV2
 plugin binary, not a runnable headless engine (docs/08 was wrong).
 
@@ -143,7 +145,7 @@ Development planning happens in a Claude cloud session in this repo.
   mock at `/mock/` (`shell/mock/index.html`, docs/11 §8); Andrew: loves the
   cards, glyphs better for teaching. Test build 0.4 (2026-10-15) adds the
   engine bridge and the live glyph spike at `/spike-b/` (docs/12); 0.5
-  adds cables by touch there (docs/12 §6); 0.6 adds undo/redo (§7); 0.7 makes plugs pickable at either end (§8); 0.8 adds module add/remove (§9).
+  adds cables by touch there (docs/12 §6); 0.6 adds undo/redo (§7); 0.7 makes plugs pickable at either end (§8); 0.8 adds module add/remove (§9); 0.9 adds saving (§10).
 - Phone result 2026-10-15 (Andrew, docs/08): sound works, audio starts on
   the one tap, engine keeps up with live knob turns, about 10 s first load
   on slow Wi-Fi. Menus: 2 s long-press too long, rows hard to slide over,

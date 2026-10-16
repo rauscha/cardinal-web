@@ -244,3 +244,44 @@ undos return to the starting patch. Audio ran throughout.
 Not done: saving the patch from this UI, custom displays, audio-rate
 readout, the help drawer bound to the metadata (descriptions and manual
 URLs are already in the JSON).
+
+## 10. Saving (test build 0.9, 2026-10-16)
+
+No engine change. The bridge's `get_patch_json` is Rack's own `toJson`,
+the same plain-text `.vcv` the stock File menu opens, so a saved patch
+loads in desktop Cardinal and in the fallback canvas unchanged.
+
+Four layers, all in the page:
+
+1. **Autosave.** Every change (cable, parameter gesture, module add or
+   remove, undo, redo) schedules a save 0.8 s later into the browser's
+   IndexedDB; the page also saves when it goes to the background. On the
+   next load, if the autosave differs from the patch the engine started
+   with, a chip offers **Restore** or **Keep this**.
+2. **Named library.** Save asks for a name the first time and then saves
+   in place; the header shows the name and the last save time, or
+   "unsaved changes". The Patches sheet lists saved patches newest first
+   with Load, File and Delete, plus New patch (the startup patch).
+3. **Files out.** Download writes `Name.vcv`; Share uses the Web Share API
+   with the file where the browser supports it (Android Chrome) and falls
+   back to download.
+4. **Files in.** Import opens the file picker and loads any `.vcv` or
+   `.json` patch, including desktop Cardinal patches.
+
+Storage is per browser and per origin. It is not synced and a cleared site
+storage loses it, which is why the file routes exist; a future shell could
+add the share-URL pattern from parallax for small patches.
+
+Verified headlessly (`docs/spikes/2026-10-16-save-log.txt`): fresh boot
+offers nothing; adding a module stores a 7-module autosave within 1.5 s;
+reloading offers the restore and restoring yields 7 modules and 7 cards;
+Save as "Arp with filter" shows the name and time and one library row; New
+patch returns to 6 modules; Load returns to 7; Download produced
+`Arp_with_filter.vcv` with 7 modules; importing `startup.vcv` gave 6 and
+set the name; the downloaded file loads back through the bridge. Audio
+ran throughout.
+
+Remaining from the original list: custom displays, audio-rate readout,
+the help drawer. Beyond that list, the card UI now needs what the shell
+plan always had: service worker for the 10 s load, install manifest,
+onboarding, and the learning content.

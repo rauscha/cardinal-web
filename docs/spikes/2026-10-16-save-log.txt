@@ -1,0 +1,11 @@
+fresh boot: modules 6, restore chip: false
+after add + autosave wait: modules 7, autosave stored: 3581 bytes, 7 modules
+after reload: modules 6, chip: Unsaved work from 10/16/2026, 4:19:58 AM. Restore it?
+after restore: modules 7, cards 7
+saved: name shown Arp with filter · saved 4:20:05 AM; library rows 1
+after New: modules 6 name Untitled
+after Load: modules 7 name Arp with filter
+download: Arp_with_filter.vcv, 3556 bytes, modules in file 7
+after import startup.vcv: modules 6 name startup
+round trip load of download: 1 -> modules 7
+audio: running
