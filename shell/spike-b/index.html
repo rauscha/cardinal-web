@@ -9,9 +9,12 @@
   :root { --bg:#111; --card:#1c1c1f; --card2:#242428; --line:#3a3a40; --text:#ececec; --muted:#9a9aa3;
           --audio:#ffb648; --cv:#5fb3ff; --gate:#f2f2f2; --clock:#b9b9b9; --accent:#e9e9e9; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  input, textarea, .hbody { user-select:text; -webkit-user-select:text; }
   html,body { margin:0; background:var(--bg); color:var(--text); font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overscroll-behavior:none; }
   header { position:sticky; top:0; z-index:5; background:rgba(17,17,17,.94); backdrop-filter:blur(6px); padding:10px 12px 8px; border-bottom:1px solid var(--line); }
-  header h1 { margin:0 0 6px; font-size:15px; font-weight:600; } header h1 span { color:var(--muted); font-weight:400; }
+  header .row { flex-wrap:nowrap; } header .row .btn { padding:8px 10px; font-size:14px; } #undo, #redo, #more { font-size:17px; line-height:1; padding:6px 10px; }
+  #debug { margin-top:8px; } #debug .note { color:var(--muted); font-size:12.5px; margin-bottom:6px; }
   .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .btn { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-weight:600; padding:9px 12px; border-radius:9px; }
   .btn.primary { background:var(--accent); color:#111; border-color:var(--accent); }
@@ -57,8 +60,10 @@
   .jack.target.match svg { opacity:.9; }
   .jack.hover { background:#4a4a55; }
   .jack.armed { background:#3a3a42; box-shadow:0 0 0 2px var(--accent) inset; }
-  .jack.connected::after { content:''; position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:var(--muted); }
-  .jack.out.connected::after { right:auto; left:4px; }
+  .jack { flex-wrap:wrap; }
+  .jack .to { display:none; flex-basis:100%; font-size:11.5px; color:var(--muted); padding-left:30px; margin-top:-3px; line-height:1.25; }
+  .jack.out .to { padding-left:0; padding-right:30px; }
+  .jack.connected .to { display:block; }
   #sheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
   #sheet[hidden] { display:none; }
   #psheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
@@ -131,20 +136,24 @@
 </head>
 <body>
 <header>
-  <h1>Spike B+ <span>· glyph cards driven by the real Cardinal engine · C++ canvas hidden</span></h1>
   <div class="row">
-    <button class="btn primary" id="start">Tap to start audio</button>
-    <button class="btn" id="toggle-ui">Show stock UI</button>
-    <button class="btn" id="latency">Latency test</button>
-    <button class="btn" id="reload">Reload startup patch</button>
-    <button class="btn" id="add">Add module</button>
-    <button class="btn" id="save">Save</button>
+    <button class="btn primary" id="start">Start audio</button>
+    <button class="btn" id="add">Add</button>
     <button class="btn" id="patches">Patches</button>
-    <button class="btn" id="undo" disabled>Undo</button>
-    <button class="btn" id="redo" disabled>Redo</button>
+    <button class="btn" id="undo" disabled aria-label="Undo">↶</button>
+    <button class="btn" id="redo" disabled aria-label="Redo">↷</button>
+    <button class="btn" id="more" aria-expanded="false" aria-label="More">⋯</button>
   </div>
-  <div id="patchname"><b id="pname">Untitled</b> <span id="psaved"></span></div>
-  <div id="stats">loading engine…</div>
+  <div id="patchname"><b id="pname">Untitled</b> <span id="psaved"></span> <span id="hist"></span></div>
+  <div id="debug" hidden>
+    <div class="note">Spike B+ · glyph cards driven by the real Cardinal engine, C++ canvas hidden · test build 0.11</div>
+    <div class="row">
+      <button class="btn" id="toggle-ui">Show stock UI</button>
+      <button class="btn" id="latency">Latency test</button>
+      <button class="btn" id="reload">Reload startup patch</button>
+    </div>
+    <div id="stats">loading engine…</div>
+  </div>
 </header>
 <div id="boot">Loading the engine (about 10 MB). The page builds its cards from the engine's own module list.</div>
 <main id="main"><svg id="wires"></svg></main>
@@ -155,7 +164,7 @@
 </div>
 <div id="psheet" hidden>
   <div class="sheet-hd"><input id="psheet-name" type="text" placeholder="Patch name" autocomplete="off"><button class="btn primary" id="psheet-save">Save as</button><button class="btn" id="psheet-close">Close</button></div>
-  <div class="sheet-actions"><button class="btn" id="p-download">Download .vcv</button><button class="btn" id="p-share">Share</button><button class="btn" id="p-import">Import file</button><button class="btn" id="p-new">New patch</button><input type="file" id="p-file" accept=".vcv,.json,application/json,text/plain" hidden></div>
+  <div class="sheet-actions"><button class="btn primary" id="save">Save</button><button class="btn" id="p-download">Download .vcv</button><button class="btn" id="p-share">Share</button><button class="btn" id="p-import">Import file</button><button class="btn" id="p-new">New patch</button><input type="file" id="p-file" accept=".vcv,.json,application/json,text/plain" hidden></div>
   <div class="plist" id="plist"></div>
 </div>
 <div id="hsheet" hidden>
@@ -233,7 +242,8 @@ function rebuild() {
   // watch list: every input and output voltage, in module order
   watch = []; watchIndex = {};
   mods.forEach(m => { m.inputs.forEach(p => { watchIndex[m.id + ':i' + p.id] = watch.length; watch.push([m.id, 0, p.id]); });
-                      m.outputs.forEach(p => { watchIndex[m.id + ':o' + p.id] = watch.length; watch.push([m.id, 1, p.id]); }); });
+                      m.outputs.forEach(p => { watchIndex[m.id + ':o' + p.id] = watch.length; watch.push([m.id, 1, p.id]); });
+                      if (m.model === 'SEQ3') { watchIndex[m.id + ':l1'] = watch.length; watch.push([m.id, 2, 1]); } });
   if (watchPtr) Module._free && Module._free(watchPtr);
   watchPtr = Module._malloc(4 * Math.max(1, watch.length));
   B.watch(JSON.stringify(watch));
@@ -243,8 +253,12 @@ function rebuild() {
   if (helpOpen) { if (mods.some(m => m.id === helpOpen.mid)) openHelp(helpOpen.mid); else closeHelp(); }
 }
 function refreshCables() { cables = JSON.parse(B.cablesJson()); markConnected(); drawWires(); if (helpOpen) openHelp(helpOpen.mid); }
-function markConnected() { document.querySelectorAll('.jack').forEach(j => j.classList.remove('connected'));
-  cables.forEach(c => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId); if (a) a.classList.add('connected'); if (b) b.classList.add('connected'); }); }
+function markConnected() { document.querySelectorAll('.jack').forEach(j => { j.classList.remove('connected'); var t = j.querySelector('.to'); if (t) t.textContent = ''; });
+  var outs = {};
+  cables.forEach(c => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId);
+    if (b) { b.classList.add('connected'); b.querySelector('.to').textContent = '← ' + modName(c.outputModuleId) + ' · ' + (a ? a.dataset.n : '?'); }
+    if (a) { a.classList.add('connected'); var k = a.id; (outs[k] = outs[k] || []).push(modName(c.inputModuleId) + ' · ' + (b ? b.dataset.n : '?')); } });
+  Object.keys(outs).forEach(k => { document.getElementById(k).querySelector('.to').textContent = '→ ' + outs[k].join(', '); }); }
 // ---------- patching. Model: you hold a PLUG, not a jack.
 //  press an OUT jack            -> new cable from it (outputs can feed many inputs, as in Rack)
 //  press a free IN jack         -> new cable into it
@@ -275,8 +289,9 @@ function pickUpInput(j) { // hold the plug that sits in this connected input
   setArm({ el: o, type: j.dataset.t, targets: 'io', cable: c, held: j }, 'Holding the cable from ' + cableLabel(c) + '<br>drop on another <b>IN</b> to move it, on an <b>OUT</b> to change its source', true);
 }
 function startNew(j) {
-  var n = j.dataset.k === 'o' ? cablesOnOutput(+j.dataset.m, +j.dataset.p).length : 0;
-  setArm({ el: j, type: j.dataset.t, targets: j.dataset.k === 'o' ? 'i' : 'o', cable: null }, '<b>' + esc(modName(+j.dataset.m)) + ' › ' + esc(j.dataset.n) + '</b> · drag or tap ' + (j.dataset.k === 'o' ? 'an <b>IN</b>' : 'an <b>OUT</b>') + ' jack to connect' + (n ? ' · ' + n + ' cable' + (n > 1 ? 's' : '') + ' already here, tap one to move it' : ''), false,
+  var outCables = j.dataset.k === 'o' ? cablesOnOutput(+j.dataset.m, +j.dataset.p) : [], n = outCables.length;
+  var what = n ? ' · drag or tap an <b>IN</b> to add a cable, or another <b>OUT</b> to move ' + (n > 1 ? 'its ' + n + ' cables' : 'its cable') + ' there' : ' · drag or tap ' + (j.dataset.k === 'o' ? 'an <b>IN</b>' : 'an <b>OUT</b>') + ' jack to connect';
+  setArm({ el: j, type: j.dataset.t, targets: j.dataset.k === 'o' ? (n ? 'io' : 'i') : 'o', cable: null, moveAll: n ? outCables : null }, '<b>' + esc(modName(+j.dataset.m)) + ' › ' + esc(j.dataset.n) + '</b>' + what, false,
     [['What is this jack?', () => { var mid = +j.dataset.m, key = j.dataset.k + j.dataset.p; clearArm(); openHelp(mid, null, key); }]]);
 }
 function pickCable(c) { // tapped a drawn cable
@@ -291,6 +306,7 @@ function dropOn(t) { // finish the armed action on target jack t
   if (a.cable) { var c = a.cable; var outM = c.outputModuleId, outP = c.outputId, inM = c.inputModuleId, inP = c.inputId;
     if (t.dataset.k === 'i') { inM = +t.dataset.m; inP = +t.dataset.p; } else { outM = +t.dataset.m; outP = +t.dataset.p; }
     B.moveCable(c.id, outM, outP, inM, inP); }
+  else if (a.moveAll && t.dataset.k === 'o') { a.moveAll.forEach(c => B.moveCable(c.id, +t.dataset.m, +t.dataset.p, c.inputModuleId, c.inputId)); }
   else { var out = a.el.dataset.k === 'o' ? a.el : t, inp = a.el.dataset.k === 'o' ? t : a.el; B.addCable(+out.dataset.m, +out.dataset.p, +inp.dataset.m, +inp.dataset.p); }
   clearArm(); refreshCables(); updateUndo(); touched(); t.classList.add('hover'); setTimeout(() => t.classList.remove('hover'), 350);
 }
@@ -353,8 +369,8 @@ function bar(m, p) { var v = (p.value - p.min) / (p.max - p.min || 1);
   return '<div class="bar" data-m="' + m.id + '" data-p="' + p.id + '" title="' + esc(p.description) + '"><label>' + esc(p.name) + '</label><div class="track"><div class="fill" style="width:' + (v*100) + '%"></div><div class="knob" style="left:' + (v*100) + '%"></div></div><div class="val">' + esc(disp(p)) + '</div></div>'; }
 function disp(p) { return p.display + (p.unit && p.display.indexOf(p.unit.trim()) < 0 ? ' ' + p.unit.trim() : ''); }
 function jacks(m) {
-  var ins = m.inputs.map(p => '<div class="jack in" id="j-' + m.id + '-i' + p.id + '" data-m="' + m.id + '" data-k="i" data-p="' + p.id + '" data-t="' + portType(m, p) + '" data-n="' + esc(p.name) + '">' + J[portType(m, p)] + '<span>' + esc(p.name) + '</span><span class="v"></span></div>').join('');
-  var outs = m.outputs.map(p => '<div class="jack out" id="j-' + m.id + '-o' + p.id + '" data-m="' + m.id + '" data-k="o" data-p="' + p.id + '" data-t="' + portType(m, p) + '" data-n="' + esc(p.name) + '"><span class="v"></span><span>' + esc(p.name) + '</span>' + J[portType(m, p)] + '</div>').join('');
+  var ins = m.inputs.map(p => '<div class="jack in" id="j-' + m.id + '-i' + p.id + '" data-m="' + m.id + '" data-k="i" data-p="' + p.id + '" data-t="' + portType(m, p) + '" data-n="' + esc(p.name) + '">' + J[portType(m, p)] + '<span>' + esc(p.name) + '</span><span class="v"></span><span class="to"></span></div>').join('');
+  var outs = m.outputs.map(p => '<div class="jack out" id="j-' + m.id + '-o' + p.id + '" data-m="' + m.id + '" data-k="o" data-p="' + p.id + '" data-t="' + portType(m, p) + '" data-n="' + esc(p.name) + '"><span class="v"></span><span>' + esc(p.name) + '</span>' + J[portType(m, p)] + '<span class="to"></span></div>').join('');
   return '<div class="ports"><div><h3>IN</h3>' + (ins || '<div class="jack"><span class="v">none</span></div>') + '</div><div><h3>OUT</h3>' + (outs || '<div class="jack"><span class="v">none</span></div>') + '</div></div>';
 }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -368,7 +384,8 @@ document.addEventListener('pointerdown', e => {
     track.querySelector('.fill').style.width = (ff*100) + '%'; track.querySelector('.knob').style.left = (ff*100) + '%'; p.display = B.paramDisplay(mid, pid); el.querySelector('.val').textContent = disp(p); };
   move(e); track.onpointermove = move; track.onpointerup = track.onpointercancel = () => { track.onpointermove = null; B.paramCommit(mid, pid, startValue, B.getParam(mid, pid)); updateUndo(); touched(); };
 });
-function updateUndo() { var u = document.getElementById('undo'), r = document.getElementById('redo'); u.disabled = !B.canUndo(); r.disabled = !B.canRedo(); u.textContent = B.canUndo() ? 'Undo ' + B.undoName() : 'Undo'; r.textContent = B.canRedo() ? 'Redo ' + B.redoName() : 'Redo'; }
+function updateUndo() { var u = document.getElementById('undo'), r = document.getElementById('redo'); u.disabled = !B.canUndo(); r.disabled = !B.canRedo(); u.title = B.canUndo() ? 'Undo ' + B.undoName() : ''; r.title = B.canRedo() ? 'Redo ' + B.redoName() : '';
+  document.getElementById('hist').textContent = B.canUndo() ? '· undo: ' + B.undoName() : ''; }
 function afterHistory() { var n = JSON.parse(B.modulesJson()).length; if (n !== mods.length) rebuild(); else refreshCables(); lastParamPoll = 0; updateUndo(); touched(); }
 document.getElementById('undo').onclick = () => { if (B && B.undo()) afterHistory(); };
 document.getElementById('redo').onclick = () => { if (B && B.redo()) afterHistory(); };
@@ -380,12 +397,12 @@ function frame(now) {
   if (stats.last) { stats.frames.push(now - stats.last); if (stats.frames.length > 120) stats.frames.shift(); } stats.last = now;
   var n = B.readWatched(watchPtr, watch.length); sig = Module.HEAPF32.subarray(watchPtr >> 2, (watchPtr >> 2) + n);
   // jack activity and readouts
-  watch.forEach((w, i) => { var el = document.getElementById('j-' + w[0] + '-' + (w[1] ? 'o' : 'i') + w[2]); if (!el) return; var val = sig[i];
+  watch.forEach((w, i) => { if (w[1] > 1) return; var el = document.getElementById('j-' + w[0] + '-' + (w[1] ? 'o' : 'i') + w[2]); if (!el) return; var val = sig[i];
     el.classList.toggle('live', Math.abs(val) > 0.5); if ((i + (now / 16 | 0)) % 6 === 0) el.querySelector('.v').textContent = Math.abs(val) < 0.005 ? '' : val.toFixed(1) + ' V'; });
   mods.forEach(m => {
     if (m.model === 'SEQ3') { var steps = document.getElementById('steps-' + m.id); if (!steps) return; var cur = -1; for (var i = 0; i < 8; i++) if (v(m.id, 'o', 4 + i) > 1) cur = i;
       Array.from(steps.children).forEach((d, i) => { d.classList.toggle('cur', i === cur); var p = m.params.find(x => x.id === 4 + i); if (p) { var f = (p.value - p.min) / (p.max - p.min || 1); d.firstChild.style.height = (8 + f * 52) + 'px'; d.lastChild.textContent = noteName(p.value); } });
-      var r = document.getElementById('running-' + m.id); if (r) r.textContent = v(m.id, 'o', 14) > 1 ? 'running' : 'stopped'; }
+      var r = document.getElementById('running-' + m.id); if (r) r.textContent = v(m.id, 'l', 1) > 0.5 ? 'running' : 'stopped'; }
     if (m.model === 'VCO') glyph(m, (ctx, w, h) => { var pitch = v(m.id, 'i', 0), fp = m.params.find(p => p.id === 2); var semis = (fp ? fp.value : 0) + pitch * 12; var f = 261.63 * Math.pow(2, semis / 12);
       var out = m.outputs.filter(p => cables.some(c => c.outputModuleId === m.id && c.outputId === p.id)).map(p => p.name) ; var shape = out[0] || 'Saw';
       ctx.strokeStyle = '#ffb648'; ctx.lineWidth = 3; ctx.beginPath(); var cycles = 3, ph = (now / 1000 * 2) % 1;
@@ -420,14 +437,21 @@ function showStats() { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.
 // ---------- wires: redrawn whenever a card changes size (details open, orientation, scroll)
 function drawWires() { var svg = document.getElementById('wires'); if (!svg) return; var main = document.getElementById('main'), mr = main.getBoundingClientRect();
   var landscape = window.matchMedia('(orientation: landscape) and (min-width: 700px)').matches; svg.setAttribute('height', main.scrollHeight); svg.style.width = landscape ? main.scrollWidth + 'px' : '44px'; svg.setAttribute('width', landscape ? main.scrollWidth : 44); var html = '';
+  // portrait lanes: cables whose vertical spans overlap get different lanes, so a wire can be followed without relying on colour
+  var lane = {}, nLanes = 1;
+  if (!landscape) { var spans = cables.map(c => { var a = document.querySelector('#j-' + c.outputModuleId + '-o' + c.outputId + ' svg'), b = document.querySelector('#j-' + c.inputModuleId + '-i' + c.inputId + ' svg'); if (!a || !b) return null; var y1 = a.getBoundingClientRect().top, y2 = b.getBoundingClientRect().top; return { id: c.id, top: Math.min(y1, y2), bot: Math.max(y1, y2) }; }).filter(Boolean).sort((p, q) => p.top - q.top);
+    var ends = []; spans.forEach(sp => { var l = ends.findIndex(e => e < sp.top - 10); if (l < 0) { l = ends.length; ends.push(0); } ends[l] = sp.bot; lane[sp.id] = l; }); nLanes = Math.max(1, ends.length); }
+  var laneStep = Math.min(8, 30 / Math.max(1, nLanes - 1));
+  var focus = arm && arm.el ? arm.el : null, focusCable = arm && arm.cable;
   cables.forEach((c, k) => { var a = document.querySelector('#j-' + c.outputModuleId + '-o' + c.outputId + ' svg'), b = document.querySelector('#j-' + c.inputModuleId + '-i' + c.inputId + ' svg'); if (!a || !b) return;
+    var related = !focus || (focusCable ? focusCable.id === c.id : (focus.dataset.k === 'o' ? c.outputModuleId === +focus.dataset.m && c.outputId === +focus.dataset.p : c.inputModuleId === +focus.dataset.m && c.inputId === +focus.dataset.p));
     var im = mods.find(m => m.id === c.inputModuleId), ip = im && im.inputs.find(p => p.id === c.inputId); var col = COLORS[im && ip ? portType(im, ip) : 'audio'];
-    var held = arm && arm.cable && arm.cable.id === c.id; var op = held && !arm.picking ? '.25' : (held ? '1' : '.8'), sw = held && arm.picking ? 5 : 3;
+    var held = arm && arm.cable && arm.cable.id === c.id; var op = held && !arm.picking ? '.25' : (held ? '1' : (related ? '.85' : '.18')), sw = held && arm.picking ? 5 : 3;
     var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); var d;
     if (landscape) { var x1 = ra.left + ra.width/2 - mr.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mr.top, x2 = rb.left + rb.width/2 - mr.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mr.top, dx = Math.max(60, (x2 - x1) * 0.4), sag = 40 + k * 6;
       d = 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + (y1 + sag) + ', ' + (x2 - dx) + ' ' + (y2 + sag) + ', ' + x2 + ' ' + y2;
       html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + sw + '" fill="none" opacity="' + op + '"/>'; }
-    else { var y1 = ra.top + ra.height/2 - mr.top, y2 = rb.top + rb.height/2 - mr.top, x = 10 + (k % 4) * 8;
+    else { var y1 = ra.top + ra.height/2 - mr.top, y2 = rb.top + rb.height/2 - mr.top, x = 10 + (lane[c.id] || 0) * laneStep;
       d = 'M40 ' + y1 + ' H' + x + ' V' + y2 + ' H40';
       html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (held && arm.picking ? 4 : 2.5) + '" fill="none" opacity="' + op + '"/><circle cx="' + x + '" cy="' + y1 + '" r="4" fill="' + col + '"/><circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + col + '"/>'; }
     html += '<path class="wire-hit" data-cable="' + c.id + '" d="' + d + '" stroke="transparent" stroke-width="22" fill="none" style="pointer-events:stroke"/>'; });
@@ -520,7 +544,7 @@ async function renderPatches() { var list = (await DB.all()).filter(r => r.id !=
 function downloadJson(name, json) { var blob = new Blob([json], { type: 'application/json' }); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (name || 'patch').replace(/[^\w.-]+/g, '_') + '.vcv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
 async function sharePatch() { var json = patchJson(), file = new File([json], (patch.name || 'patch').replace(/[^\w.-]+/g, '_') + '.vcv', { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: patch.name }); return; } catch (e) { if (e.name === 'AbortError') return; } } downloadJson(patch.name, json); }
-document.getElementById('save').onclick = () => { if (!B) return; if (patch.id) saveAs(patch.name); else { openPatches(); document.getElementById('psheet-name').focus(); } };
+document.getElementById('save').onclick = () => { if (!B) return; if (patch.id) saveAs(patch.name); else { var n = document.getElementById('psheet-name').value.trim(); if (n) saveAs(n); else document.getElementById('psheet-name').focus(); } };
 function openPatches() { document.getElementById('psheet').hidden = false; document.getElementById('psheet-name').value = patch.name === 'Untitled' ? '' : patch.name; renderPatches(); }
 document.getElementById('patches').onclick = openPatches;
 document.getElementById('psheet-close').onclick = () => document.getElementById('psheet').hidden = true;
@@ -538,7 +562,8 @@ async function offerRestore() { try { var a = await DB.get('autosave'); if (!a |
   showChip('Unsaved work from <b>' + new Date(a.when).toLocaleString() + '</b>' + (a.name && a.name !== 'Untitled' ? ' (' + esc(a.name) + ')' : '') + '. Restore it?', false, [['Restore', async () => { hideChip(); await loadRecord(a); }], ['Keep this', () => { hideChip(); autosave(); }]]); } catch (e) {} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && B) { clearTimeout(autosaveTimer); autosave(); } });
 // ---------- buttons
-document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio running'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
+document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio on'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
+document.getElementById('more').onclick = function () { var d = document.getElementById('debug'); d.hidden = !d.hidden; this.setAttribute('aria-expanded', String(!d.hidden)); };
 document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };
 document.getElementById('latency').onclick = function () { if (!B || latencyTest) return; var vca = mods.find(m => m.model === 'VCA-1'); if (!vca) return; latencyTest = { t0: performance.now(), hits: 0, done: false, restore: B.getParam(vca.id, 0) }; B.setParam(vca.id, 0, 0); setTimeout(() => { if (latencyTest && latencyTest.done) window.lastLatency = latencyTest.ms; }, 900); };
 document.getElementById('reload').onclick = function () { if (!B) return; fetch('../startup.vcv').then(r => r.text()).then(t => { B.loadPatch(t); setTimeout(rebuild, 200); }); };

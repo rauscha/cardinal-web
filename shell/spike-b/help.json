@@ -339,7 +339,7 @@
         "Step 8": "10 V only while step 8 plays.",
         "Steps": "The Steps setting as a voltage: number of steps minus one, so 8 steps gives 7 V. Patch it into another SEQ 3's Steps input to keep both the same length.",
         "Clock": "The clock, internal or passed through, for driving other modules.",
-        "Run": "10 V while running.",
+        "Run": "A short pulse each time the sequencer starts or stops, so another module can follow its run state.",
         "Reset": "Passes the reset trigger on."
       }
     },

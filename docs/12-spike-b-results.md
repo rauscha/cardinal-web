@@ -348,3 +348,55 @@ help.
 Remaining from the original list: custom displays and audio-rate readout.
 Then the shell items: service worker, install manifest, onboarding,
 learning content.
+
+## 12. First phone test of the card UI (Andrew, 2026-10-16) and test build 0.11
+
+Andrew's report on build 0.10 at `/spike-b/`, Android Chrome, portrait,
+with a screenshot: the engine sat at 12 % with the page at a steady
+16.7 ms frame (60 fps), so the frame-rate question is answered for his
+phone. Four problems, all in the page, all fixed in build 0.11 without a
+rebuild:
+
+1. **Random text highlighted when tapping.** Android's long-press text
+   selection grabbed jack labels ("Square" in the screenshot). Fix:
+   `user-select: none` on the body (inputs and the help drawer's text stay
+   selectable).
+2. **Cannot drag a cable out of one OUT and into another.** Pressing a
+   connected OUT only started a new cable; moving the source end needed a
+   tap on the drawn wire and a chip button, which nobody finds. Now a
+   pressed OUT that has cables targets both kinds of jack: drop on an IN
+   adds a cable as before; drop on another OUT moves every cable from this
+   output there (one cable, the common case, is one undo step; several are
+   one step each, since the bridge has no batch move). The chip says both.
+3. **Wires hard to track in portrait, colour the only clue.** Colour codes
+   signal type, not identity, and is the one channel Andrew cannot use.
+   Three changes: every connected jack now carries a text label with the
+   other end ("← SEQ 3 · CV 1", "→ VCA · Channel, VCF · Audio"), so the
+   patch reads without tracing; portrait wires are assigned to lanes so
+   that overlapping spans never share an x (greedy interval colouring,
+   verified 0 clashes on the startup patch); while a jack is pressed,
+   wires not touching it dim to 18 %.
+4. **Header far too big.** One row now: Audio, Add, Patches, undo and redo
+   arrows, and `⋯` which opens the debug controls (stock UI, latency,
+   reload, the stats line). Save moved into the Patches sheet next to
+   Save as. Header 83 px instead of 325 at 390 px wide; the undo action
+   name moved to the patch line.
+
+Also fixed from the same screenshot: SEQ 3 read "stopped" while running.
+The card read the Run **output**, which SEQ 3 only pulses when run
+toggles; it now watches the module's Run **light** through the bridge's
+light channel. The help text for that output was wrong the same way and
+is corrected.
+
+Verified headlessly (`docs/spikes/2026-10-16-phone1-log.txt`,
+`2026-10-16-phone1-labels.png`): selection none on labels and text in the
+drawer; header one row at 390 and 360 px; labels on VCO pitch and
+Sawtooth, none on unconnected Sine; 6 wires in 4 lanes, 0 clashes;
+pressing Sawtooth offered both actions and dimmed 5 of 6 wires; tapping
+Sine moved the cable (6 cables before and after, VCA fed by Sine, undo name
+"move cable", undo restored Sawtooth); a second cable from Sawtooth to a
+new VCF then both moved to Triangle in one gesture; SEQ 3 reads
+"running". Audio ran throughout.
+
+Still open from Andrew's note: he knows the header was debug chrome; the
+rest of the shell (install, service worker) is unchanged.
