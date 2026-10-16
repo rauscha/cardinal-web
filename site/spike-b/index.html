@@ -63,6 +63,33 @@
   #sheet[hidden] { display:none; }
   #psheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
   #psheet[hidden] { display:none; }
+  #hsheet { position:fixed; left:0; right:0; bottom:0; top:12vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
+  #hsheet[hidden] { display:none; }
+  #hsheet .sheet-hd { align-items:center; }
+  #hsheet .ht { flex:1 1 120px; min-width:0; } #hsheet .ht b { display:block; font-size:17px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } #hsheet .ht span { color:var(--muted); font-size:12.5px; }
+  #hsheet a.btn { text-decoration:none; display:inline-block; }
+  .hbody { overflow-y:auto; flex:1; padding:4px 14px calc(24px + env(safe-area-inset-bottom)); font-size:14.5px; line-height:1.45; }
+  .hbody > * { max-width:700px; }
+  .hbody h3 { margin:18px 0 6px; font-size:11.5px; letter-spacing:.6px; color:var(--muted); font-weight:600; text-transform:uppercase; }
+  .hdesc { color:var(--muted); margin:8px 0 0; }
+  .habout { margin:8px 0 0; }
+  .htry { margin:10px 0 0; padding:8px 12px; border-left:3px solid var(--accent); background:#222227; border-radius:0 8px 8px 0; }
+  .htry b { font-weight:600; }
+  .hnone { color:var(--muted); font-style:italic; }
+  .hrow { padding:8px 0; border-bottom:1px solid #26262b; }
+  .hrow.hl { background:#26262d; margin:0 -14px; padding:8px 14px; border-radius:8px; }
+  .hrow .hn { display:flex; align-items:center; gap:8px; }
+  .hrow .hn b { flex:1; min-width:0; font-weight:600; }
+  .hrow .hn .hv { color:var(--text); font-size:13px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .hrow .hn .hty { color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; }
+  .hrow .hn svg { width:20px; height:20px; flex:none; }
+  .hrow p { margin:3px 0 0; color:#cfcfd6; }
+  .hrow .hmeta { color:var(--muted); font-size:12px; margin-top:2px; }
+  .hrow .hconn { margin-top:4px; font-size:13px; }
+  .hrow .hconn button { border:1px solid var(--line); background:#2a2a30; color:var(--text); font:inherit; font-size:12.5px; padding:4px 9px; border-radius:999px; margin:2px 4px 0 0; }
+  .hgroup { margin:6px 0; } .hgroup summary { cursor:pointer; color:var(--muted); padding:6px 0; }
+  .hfoot { color:var(--muted); font-size:12px; margin-top:22px; line-height:1.4; }
+  .hfoot a { color:var(--muted); }
   .sheet-hd { display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
   .sheet-hd input { flex:1 1 120px; min-width:0; font:inherit; font-size:16px; padding:9px 12px; border-radius:9px; border:1px solid var(--line); background:#2b2b31; color:var(--text); }
   .sheet-hd .btn { flex:none; white-space:nowrap; }
@@ -72,7 +99,10 @@
   #sheet-list { overflow-y:auto; flex:1; padding:6px 0 calc(16px + env(safe-area-inset-bottom)); }
   .model { display:block; width:100%; text-align:left; border:0; border-bottom:1px solid #26262b; background:transparent; color:var(--text); font:inherit; padding:12px 14px; }
   .model b { display:block; font-size:15px; } .model span { display:block; color:var(--muted); font-size:12.5px; margin-top:2px; } .model i { font-style:normal; color:var(--muted); font-size:11.5px; }
-  .card .hd .menu { border:1px solid var(--line); background:#2a2a30; color:var(--text); border-radius:50%; width:30px; height:30px; font-weight:700; flex:none; }
+  .card .hd .menu { border:1px solid var(--line); background:#2a2a30; color:var(--text); border-radius:50%; width:30px; height:30px; font-weight:700; flex:none; font-size:15px; }
+  .card .hd .menu.help { background:var(--accent); color:#111; border-color:var(--accent); }
+  .card .hd h2 { cursor:pointer; }
+  .bar label { cursor:pointer; }
   #ghost { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:30; }
   #chip { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:31; background:#2a2a30; border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:none; flex-wrap:wrap; align-items:center; gap:8px 10px; font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
   #chip .t { flex:1 1 180px; }
@@ -127,6 +157,10 @@
   <div class="sheet-hd"><input id="psheet-name" type="text" placeholder="Patch name" autocomplete="off"><button class="btn primary" id="psheet-save">Save as</button><button class="btn" id="psheet-close">Close</button></div>
   <div class="sheet-actions"><button class="btn" id="p-download">Download .vcv</button><button class="btn" id="p-share">Share</button><button class="btn" id="p-import">Import file</button><button class="btn" id="p-new">New patch</button><input type="file" id="p-file" accept=".vcv,.json,application/json,text/plain" hidden></div>
   <div class="plist" id="plist"></div>
+</div>
+<div id="hsheet" hidden>
+  <div class="sheet-hd"><div class="ht"><b id="h-name"></b><span id="h-plugin"></span></div><a class="btn" id="h-manual" target="_blank" rel="noopener" hidden>Manual ↗</a><button class="btn" id="h-close">Close</button></div>
+  <div class="hbody" id="hbody"></div>
 </div>
 <svg id="ghost"></svg>
 <div id="chip"><div class="t"></div><button id="chip-disconnect" class="danger">Disconnect</button><button id="chip-cancel">Cancel</button></div>
@@ -185,8 +219,15 @@ function bootBridge() {
   requestAnimationFrame(frame);
   setTimeout(offerRestore, 800);
 }
+var HELP = null; fetch('help.json').then(r => r.json()).then(h => { HELP = h; if (mods.length) rebuild(); }).catch(e => console.warn('help.json', e));
+function helpFor(m) { return HELP && HELP.modules[m.plugin + '/' + m.model] || null; }
+// Fill names the module left empty (dead parameter slots are dropped; unnamed jacks get ours or a generic name).
+function applyNames(m) { var h = helpFor(m), names = h && h.names || {};
+  ['params', 'inputs', 'outputs'].forEach(sec => m[sec].forEach(p => { var n = names[sec] && names[sec][p.id]; if (n != null) { p.name = n; p.ours = true; } }));
+  m.params = m.params.filter(p => p.name);
+  m.inputs.forEach(p => { if (!p.name) p.name = 'In ' + (p.id + 1); }); m.outputs.forEach(p => { if (!p.name) p.name = 'Out ' + (p.id + 1); }); }
 function rebuild() {
-  mods = JSON.parse(B.modulesJson()); cables = JSON.parse(B.cablesJson());
+  mods = JSON.parse(B.modulesJson()); cables = JSON.parse(B.cablesJson()); mods.forEach(applyNames);
   mods.sort((a, b) => (a.pos ? a.pos[1] * 1000 + a.pos[0] : 0) - (b.pos ? b.pos[1] * 1000 + b.pos[0] : 0));
   var main = document.getElementById('main'); main.innerHTML = '<svg id="wires"></svg>' + mods.map(card).join('');
   // watch list: every input and output voltage, in module order
@@ -199,8 +240,9 @@ function rebuild() {
   mods.forEach(m => { if (m.model === 'SEQ3') { var r = document.getElementById('run-' + m.id); if (r) r.onclick = () => { B.setParam(m.id, 1, 1); setTimeout(() => B.setParam(m.id, 1, 0), 60); }; } });
   markConnected();
   requestAnimationFrame(drawWires);
+  if (helpOpen) { if (mods.some(m => m.id === helpOpen.mid)) openHelp(helpOpen.mid); else closeHelp(); }
 }
-function refreshCables() { cables = JSON.parse(B.cablesJson()); markConnected(); drawWires(); }
+function refreshCables() { cables = JSON.parse(B.cablesJson()); markConnected(); drawWires(); if (helpOpen) openHelp(helpOpen.mid); }
 function markConnected() { document.querySelectorAll('.jack').forEach(j => j.classList.remove('connected'));
   cables.forEach(c => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId); if (a) a.classList.add('connected'); if (b) b.classList.add('connected'); }); }
 // ---------- patching. Model: you hold a PLUG, not a jack.
@@ -218,11 +260,11 @@ function cableOnInput(mid, pid) { return cables.find(c => c.inputModuleId === mi
 function cablesOnOutput(mid, pid) { return cables.filter(c => c.outputModuleId === mid && c.outputId === pid); }
 function cableLabel(c) { var o = jackEl(c.outputModuleId, 'o', c.outputId), i = jackEl(c.inputModuleId, 'i', c.inputId); return '<b>' + esc(modName(c.outputModuleId)) + ' › ' + esc(o ? o.dataset.n : '?') + '</b> → <b>' + esc(modName(c.inputModuleId)) + ' › ' + esc(i ? i.dataset.n : '?') + '</b>'; }
 // arm: { el: the fixed jack the ghost is drawn from, type, targets: 'i'|'o'|'io', cable: cable being moved or null, newFrom: jack element when making a new cable }
-function setArm(a, html, canDisconnect) {
+function setArm(a, html, canDisconnect, extra) {
   clearArm(); arm = a; a.el.classList.add('armed');
   document.querySelectorAll('.jack[data-k]').forEach(t => { if (t === a.el) return; if (a.targets.indexOf(t.dataset.k) < 0) return; if (a.cable && t.dataset.k === 'i' && +t.dataset.m === a.cable.inputModuleId && +t.dataset.p === a.cable.inputId) return;
     t.classList.add('target'); if (t.dataset.t === a.type) t.classList.add('match'); });
-  showChip(html, canDisconnect); drawWires();
+  showChip(html, canDisconnect, extra); drawWires();
 }
 function clearArm() { if (arm) arm.el.classList.remove('armed'); var had = !!arm; arm = null; document.querySelectorAll('.jack.target, .jack.hover').forEach(t => t.classList.remove('target', 'match', 'hover')); hideChip(); clearGhost(); if (had) drawWires(); }
 function showChip(html, canDisconnect, extra) { chip.querySelector('.t').innerHTML = html; document.getElementById('chip-disconnect').style.display = canDisconnect ? '' : 'none'; chip.querySelectorAll('.extra').forEach(b => b.remove());
@@ -234,7 +276,8 @@ function pickUpInput(j) { // hold the plug that sits in this connected input
 }
 function startNew(j) {
   var n = j.dataset.k === 'o' ? cablesOnOutput(+j.dataset.m, +j.dataset.p).length : 0;
-  setArm({ el: j, type: j.dataset.t, targets: j.dataset.k === 'o' ? 'i' : 'o', cable: null }, '<b>' + esc(modName(+j.dataset.m)) + ' › ' + esc(j.dataset.n) + '</b> · drag or tap ' + (j.dataset.k === 'o' ? 'an <b>IN</b>' : 'an <b>OUT</b>') + ' jack to connect' + (n ? ' · ' + n + ' cable' + (n > 1 ? 's' : '') + ' already here, tap one to move it' : ''), false);
+  setArm({ el: j, type: j.dataset.t, targets: j.dataset.k === 'o' ? 'i' : 'o', cable: null }, '<b>' + esc(modName(+j.dataset.m)) + ' › ' + esc(j.dataset.n) + '</b> · drag or tap ' + (j.dataset.k === 'o' ? 'an <b>IN</b>' : 'an <b>OUT</b>') + ' jack to connect' + (n ? ' · ' + n + ' cable' + (n > 1 ? 's' : '') + ' already here, tap one to move it' : ''), false,
+    [['What is this jack?', () => { var mid = +j.dataset.m, key = j.dataset.k + j.dataset.p; clearArm(); openHelp(mid, null, key); }]]);
 }
 function pickCable(c) { // tapped a drawn cable
   var o = jackEl(c.outputModuleId, 'o', c.outputId), i = jackEl(c.inputModuleId, 'i', c.inputId); if (!o || !i) return;
@@ -293,7 +336,7 @@ function portType(m, p) { var n = p.name.toUpperCase();
   if (/V\/OCT|PITCH|1V\/O|CV|ENV|LFO|MOD|FM|PW/.test(n) || /ADSR|LFO|Slew/.test(m.model) && !/IN|OUT/.test(n)) return 'cv';
   if (/SEQ3/.test(m.model) && /STEP|OUT/.test(n)) return 'cv'; return 'audio'; }
 var GLYPH = { SEQ3: 1, VCO: 1, ADSR: 1, 'VCA-1': 1, HostAudio2: 1 };
-var PRIMARY = { SEQ3: [0, 3], VCO: [2, 3, 5], ADSR: [0, 1, 2, 3], 'VCA-1': [0], HostAudio2: [0] };
+var PRIMARY = { SEQ3: [0, 3], VCO: [2, 5, 4], ADSR: [0, 1, 2, 3], 'VCA-1': [0], HostAudio2: [0] };
 function card(m) {
   var prim = PRIMARY[m.model] || m.params.slice(0, 4).map(p => p.id);
   var primParams = m.params.filter(p => prim.indexOf(p.id) >= 0), rest = m.params.filter(p => prim.indexOf(p.id) < 0);
@@ -304,7 +347,7 @@ function card(m) {
   else body = '<div class="ctl">';
   body += primParams.map(p => bar(m, p)).join('') + '</div>';
   if (rest.length) body += '<details class="more"><summary>More (' + rest.length + ')</summary>' + rest.map(p => bar(m, p)).join('') + '</details>';
-  return '<section class="card" id="card-' + m.id + '"><div class="hd"><h2>' + esc(m.name) + '</h2><div class="what">' + esc(m.description || m.plugin) + '</div><button class="menu" data-remove="' + m.id + '" aria-label="Remove ' + esc(m.name) + '">×</button></div>' + body + jacks(m) + '</section>';
+  return '<section class="card" id="card-' + m.id + '"><div class="hd"><h2>' + esc(m.name) + '</h2><div class="what">' + esc(m.description || m.plugin) + '</div><button class="menu help" data-help="' + m.id + '" aria-label="About ' + esc(m.name) + '">?</button><button class="menu" data-remove="' + m.id + '" aria-label="Remove ' + esc(m.name) + '">×</button></div>' + body + jacks(m) + '</section>';
 }
 function bar(m, p) { var v = (p.value - p.min) / (p.max - p.min || 1);
   return '<div class="bar" data-m="' + m.id + '" data-p="' + p.id + '" title="' + esc(p.description) + '"><label>' + esc(p.name) + '</label><div class="track"><div class="fill" style="width:' + (v*100) + '%"></div><div class="knob" style="left:' + (v*100) + '%"></div></div><div class="val">' + esc(disp(p)) + '</div></div>'; }
@@ -366,6 +409,7 @@ function frame(now) {
   if (now - lastParamPoll > 250) { lastParamPoll = now; mods.forEach(m => m.params.forEach(p => { var nv = B.getParam(m.id, p.id); if (Math.abs(nv - p.value) > 1e-6) { p.value = nv; var el = document.querySelector('.bar[data-m="' + m.id + '"][data-p="' + p.id + '"]'); if (el) { var f = (nv - p.min) / (p.max - p.min || 1); el.querySelector('.fill').style.width = (f*100) + '%'; el.querySelector('.knob').style.left = (f*100) + '%'; p.display = B.paramDisplay(m.id, p.id); el.querySelector('.val').textContent = disp(p); } } })); }
   if (latencyTest) { var vca = mods.find(m => m.model === 'VCA-1'); if (vca && Math.abs(v(vca.id, 'o', 0)) < 0.02) { latencyTest.hits++; if (latencyTest.hits >= 2 && !latencyTest.done) { latencyTest.done = true; latencyTest.ms = now - latencyTest.t0; setTimeout(() => { B.setParam(vca.id, 0, latencyTest.restore); latencyTest = null; }, 800); } } else latencyTest.hits = 0; }
   if ((now / 16 | 0) % 15 === 0) showStats();
+  if (helpOpen && (now / 16 | 0) % 4 === 0) helpTick();
   requestAnimationFrame(frame);
 }
 function glyph(m, fn) { var c = document.getElementById('pic-' + m.id); if (!c) return; var ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); fn(ctx, c.width, c.height); }
@@ -395,7 +439,8 @@ new MutationObserver(() => { document.querySelectorAll('.card').forEach(c => { i
 window.addEventListener('resize', queueWires);
 // ---------- add and remove modules
 var models = null, sheetTag = '';
-function openSheet() { if (!B) return; if (!models) { models = JSON.parse(B.modelsJson()); models.sort((a, b) => a.name.localeCompare(b.name)); }
+function getModels() { if (!models && B) { models = JSON.parse(B.modelsJson()); models.sort((a, b) => a.name.localeCompare(b.name)); } return models || []; }
+function openSheet() { if (!B) return; getModels();
   var tags = {}; models.forEach(m => m.tags.forEach(t => tags[t] = (tags[t] || 0) + 1));
   document.getElementById('sheet-tags').innerHTML = '<button aria-pressed="' + (sheetTag === '') + '" data-tag="">All</button>' + Object.keys(tags).sort((a, b) => tags[b] - tags[a]).slice(0, 18).map(t => '<button aria-pressed="' + (sheetTag === t) + '" data-tag="' + esc(t) + '">' + esc(t) + ' ' + tags[t] + '</button>').join('');
   document.getElementById('sheet').hidden = false; renderSheet(); setTimeout(() => document.getElementById('sheet-q').focus(), 50); }
@@ -411,6 +456,50 @@ document.getElementById('sheet-list').addEventListener('click', e => { var b = e
   rebuild(); updateUndo(); touched(); var card = document.getElementById('card-' + id); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 900); } });
 document.addEventListener('click', e => { var b = e.target.closest('button[data-remove]'); if (!b || !B) return; var m = mods.find(x => x.id === +b.dataset.remove); if (!m) return;
   showChip('Remove <b>' + esc(m.name) + '</b> and its cables? Undo brings it back.', false, [['Remove', () => { B.removeModule(m.id); hideChip(); rebuild(); updateUndo(); touched(); }]]); });
+// ---------- help drawer: what a module, each knob and each jack does. Engine metadata first, our text (help.json) second.
+var helpOpen = null; // { mid }
+function helpText(h, sec, p) { if (!h) return ''; var t = h[sec] && (h[sec][p.name] != null ? h[sec][p.name] : h[sec]['#' + p.id]); if (t != null) return t; var pt = helpPattern(p.name); return pt ? pt.text : ''; }
+function helpPattern(name) { if (!HELP || !name) return null; for (var i = 0; i < HELP.patterns.length; i++) if (new RegExp(HELP.patterns[i].match).test(name)) return HELP.patterns[i]; return null; }
+function manualFor(m) { var mm = getModels().find(x => x.plugin === m.plugin && x.model === m.model); return (mm && mm.manual) || (HELP && HELP.plugins[m.plugin] && HELP.plugins[m.plugin].manual) || ''; }
+function typeWord(t) { return { audio: 'audio', cv: 'CV', gate: 'gate', clock: 'clock' }[t] || t; }
+function paramMeta(p) { var bits = []; if (p.labels && p.labels.length) bits.push(p.labels.join(' / ')); else { bits.push('range ' + fmt(p.min) + ' to ' + fmt(p.max)); bits.push('default ' + fmt(p.default)); } return bits.join(' · '); }
+function fmt(x) { return Math.abs(x) >= 100 ? x.toFixed(0) : +x.toFixed(2); }
+function paramRow(m, p, h, hl) { return '<div class="hrow' + (hl ? ' hl' : '') + '" data-pr="' + p.id + '"><div class="hn"><b>' + esc(p.name) + '</b><span class="hv">' + esc(disp(p)) + '</span></div>' + (helpText(h, 'params', p) ? '<p>' + esc(helpText(h, 'params', p)) + '</p>' : '') + '<div class="hmeta">' + esc(paramMeta(p)) + '</div></div>'; }
+function jackRow(m, p, k, h, hl) { var t = portType(m, p), conns;
+  if (k === 'i') { var c = cableOnInput(m.id, p.id); conns = c ? [c] : []; } else conns = cablesOnOutput(m.id, p.id);
+  var connHtml = conns.map(c => { var om = k === 'i' ? c.outputModuleId : c.inputModuleId, op = k === 'i' ? c.outputId : c.inputId, other = mods.find(x => x.id === om), port = other && (k === 'i' ? other.outputs : other.inputs).find(x => x.id === op);
+    return '<button data-goto="' + om + '">' + (k === 'i' ? '← from ' : '→ to ') + esc(other ? other.name : '?') + ' · ' + esc(port ? port.name : '?') + '</button>'; }).join('');
+  return '<div class="hrow' + (hl ? ' hl' : '') + '" data-jr="' + k + p.id + '"><div class="hn">' + J[t] + '<b>' + esc(p.name) + '</b><span class="hty">' + typeWord(t) + '</span><span class="hv hjv" data-w="' + m.id + ':' + k + p.id + '"></span></div>' + (helpText(h, k === 'i' ? 'inputs' : 'outputs', p) ? '<p>' + esc(helpText(h, k === 'i' ? 'inputs' : 'outputs', p)) + '</p>' : '') + '<div class="hconn">' + (connHtml || '<span class="hnone">not connected</span>') + '</div></div>'; }
+function groupRows(items, rowFn, own) { // rows whose names match a pattern group (3 or more alike) collapse under one summary; rows with their own text never do
+  var groups = {}, order = [], html = ''; own = own || (() => false);
+  items.forEach(p => { if (own(p)) return; var pt = helpPattern(p.name); var g = pt && pt.group; if (g) { (groups[g] = groups[g] || []).push(p); } });
+  Object.keys(groups).forEach(g => { if (groups[g].length < 3) delete groups[g]; });
+  items.forEach(p => { var pt = own(p) ? null : helpPattern(p.name), g = pt && pt.group; if (g && groups[g]) { if (order.indexOf(g) < 0) { order.push(g); html += '<details class="hgroup"><summary>' + esc(g) + ' (' + groups[g].length + ')</summary>' + groups[g].map(rowFn).join('') + '</details>'; } } else html += rowFn(p); });
+  return html; }
+function openHelp(mid, pid, jackKey) { var m = mods.find(x => x.id === mid); if (!m) return; var h = helpFor(m); helpOpen = { mid };
+  document.getElementById('h-name').textContent = m.name; document.getElementById('h-plugin').textContent = m.plugin + (h ? '' : ' · no teaching text yet for this module');
+  var url = manualFor(m), a = document.getElementById('h-manual'); a.hidden = !url; if (url) { a.href = url; try { a.title = new URL(url).hostname; } catch (e) {} }
+  var html = m.description ? '<p class="hdesc">' + esc(m.description) + '</p>' : '';
+  if (h && h.about) html += '<p class="habout">' + esc(h.about) + '</p>';
+  if (h && h.try) html += '<div class="htry"><b>Try:</b> ' + esc(h.try) + '</div>';
+  var own = sec => p => !!(h && h[sec] && (h[sec][p.name] != null || h[sec]['#' + p.id] != null));
+  html += '<h3>Knobs and switches</h3>' + (m.params.length ? groupRows(m.params, p => paramRow(m, p, h, p.id === pid), own('params')) : '<div class="hnone">No knobs.</div>');
+  html += '<h3>Inputs</h3>' + (m.inputs.length ? groupRows(m.inputs, p => jackRow(m, p, 'i', h, jackKey === 'i' + p.id), own('inputs')) : '<div class="hnone">No inputs.</div>');
+  html += '<h3>Outputs</h3>' + (m.outputs.length ? groupRows(m.outputs, p => jackRow(m, p, 'o', h, jackKey === 'o' + p.id), own('outputs')) : '<div class="hnone">No outputs.</div>');
+  var note = HELP && HELP.plugins[m.plugin] && HELP.plugins[m.plugin].note;
+  html += '<div class="hfoot">' + (note ? esc(note) + '<br>' : '') + (HELP ? esc(HELP.conventions) + '<br>' : '') + 'The one-line description and the manual link are the module author\'s, read from the engine. The rest of this text is cardinal-web\'s own (CC0) and may be wrong; the manual wins.' + (url ? ' Manual: <a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url.replace(/^https?:\/\//, '')) + '</a>' : '') + '</div>';
+  var body = document.getElementById('hbody'); body.innerHTML = html; document.getElementById('hsheet').hidden = false;
+  var hl = body.querySelector('.hrow.hl'); if (hl) { var g = hl.closest('details'); if (g) g.open = true; setTimeout(() => hl.scrollIntoView({ block: 'center' }), 30); } else body.scrollTop = 0; }
+function closeHelp() { document.getElementById('hsheet').hidden = true; helpOpen = null; }
+document.getElementById('h-close').onclick = closeHelp;
+document.getElementById('hbody').addEventListener('click', e => { var b = e.target.closest('button[data-goto]'); if (!b) return; closeHelp(); var card = document.getElementById('card-' + b.dataset.goto); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'center' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 900); } });
+document.addEventListener('click', e => { if (!B) return;
+  var hb = e.target.closest('button[data-help]'); if (hb) { openHelp(+hb.dataset.help); return; }
+  var h2 = e.target.closest('.card .hd h2, .card .hd .what'); if (h2) { openHelp(+h2.closest('.card').id.slice(5)); return; }
+  var lab = e.target.closest('.bar label'); if (lab) { var bar = lab.closest('.bar'); openHelp(+bar.dataset.m, +bar.dataset.p); } });
+function helpTick() { if (!helpOpen || !sig) return; var m = mods.find(x => x.id === helpOpen.mid); if (!m) { closeHelp(); return; }
+  document.querySelectorAll('#hbody .hrow[data-pr]').forEach(r => { var p = m.params.find(x => x.id === +r.dataset.pr); if (p) r.querySelector('.hv').textContent = disp(p); });
+  document.querySelectorAll('#hbody .hjv').forEach(el => { var i = watchIndex[el.dataset.w]; if (i == null) return; var val = sig[i]; el.textContent = Math.abs(val) < 0.005 ? '0 V' : val.toFixed(2) + ' V'; }); }
 // ---------- saving: autosave to IndexedDB on every change, a named library, file export and import
 var DB = { open() { return new Promise((res, rej) => { var r = indexedDB.open('cardinalweb', 1); r.onupgradeneeded = () => r.result.createObjectStore('patches', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
   async put(rec) { var db = await this.open(); return new Promise((res, rej) => { var t = db.transaction('patches', 'readwrite'); t.objectStore('patches').put(rec); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
