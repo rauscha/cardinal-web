@@ -212,3 +212,35 @@ ADSR cable back; pressing the busy VCA output offers a new cable and
 reports two existing. Audio ran throughout.
 
 Still not built: module add and remove, saving.
+
+## 9. Add and remove modules (test build 0.8, 2026-10-16)
+
+**Bridge.** `cardinalweb_get_models_json` lists every module the build can
+create (plugin, brand, model, name, description, tags, manual URL; 66 in
+the Mini). `cardinalweb_add_module(plugin, model)` does what Rack's own
+browser does: create the module and its widget, add both, place it after
+the right-most module of the top row (widget positions carry Rack's
+2000 HP by 100 row offset, which bit me once), load the user's template
+preset, and record one "add module" history step. `cardinalweb_remove_module`
+calls Rack's `removeAction`, which removes the cables and the module as one
+"delete module" step. Module positions in `get_modules_json` are now
+reported relative to the rack origin, matching the patch file.
+
+**Page.** "Add module" opens a bottom sheet: search box, tag chips with
+counts (Polyphonic 49, Utility 11, External 9, Oscillator…), and the list
+sorted by name with plugin and description. Tapping a row adds the module,
+closes the sheet, scrolls to the new card and flashes it. Each card header
+has a × that asks "Remove X and its cables? Undo brings it back." Undo and
+redo of module changes rebuild the cards. While a chip is open the column
+gets extra bottom padding so the last card's jacks can be scrolled above
+it (the chip had covered them).
+
+Verified headlessly (`docs/spikes/2026-10-16-module-log.txt`): 66 models,
+19 tags; search "filter" finds Filtah and both VCFs; adding Fundamental
+VCF puts a seventh card last; VCO Saw → VCF In connects; remove drops to
+six modules and six cables; undo restores module, cable and card; two more
+undos return to the starting patch. Audio ran throughout.
+
+Not done: saving the patch from this UI, custom displays, audio-rate
+readout, the help drawer bound to the metadata (descriptions and manual
+URLs are already in the JSON).

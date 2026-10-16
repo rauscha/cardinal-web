@@ -1,8 +1,8 @@
 diff --git a/src/CardinalUI.cpp b/src/CardinalUI.cpp
-index 278e36a..350c099 100644
+index 278e36a..a1f6bd2 100644
 --- a/src/CardinalUI.cpp
 +++ b/src/CardinalUI.cpp
-@@ -17,10 +17,14 @@
+@@ -17,11 +17,18 @@
  
  #include <app/MenuBar.hpp>
  #include <app/Scene.hpp>
@@ -15,9 +15,13 @@ index 278e36a..350c099 100644
  #include <helpers.hpp>
 +#include <history.hpp>
  #include <patch.hpp>
++#include <plugin.hpp>
++#include <plugin/Model.hpp>
++#include <tag.hpp>
  #include <settings.hpp>
  #include <string.hpp>
-@@ -290,6 +294,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
+ #include <system.hpp>
+@@ -290,6 +297,13 @@ static void downloadRemotePatchSucceeded(const char* const filename)
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -31,7 +35,7 @@ index 278e36a..350c099 100644
  class CardinalUI : public CardinalBaseUI,
                     public WindowParametersCallback
  {
-@@ -490,10 +501,16 @@ public:
+@@ -490,10 +504,16 @@ public:
          rack::contextSet(nullptr);
  
          WindowParametersSetCallback(context->window, this);
@@ -48,7 +52,7 @@ index 278e36a..350c099 100644
          rack::contextSet(context);
  
          context->nativeWindowId = 0;
-@@ -531,12 +548,20 @@ public:
+@@ -531,12 +551,20 @@ public:
  
      void onNanoDisplay() override
      {
@@ -69,7 +73,7 @@ index 278e36a..350c099 100644
         #ifdef DPF_RUNTIME_TESTING
          if (inSelfTest)
          {
-@@ -1276,4 +1301,433 @@ UI* createUI()
+@@ -1276,4 +1304,513 @@ UI* createUI()
  
  // -----------------------------------------------------------------------------------------------------------
  
@@ -179,8 +183,8 @@ index 278e36a..350c099 100644
 +        if (rack::app::ModuleWidget* const mw = c->scene->rack->getModule(id))
 +        {
 +            json_t* const pos = json_array();
-+            json_array_append_new(pos, json_real(mw->box.pos.x / rack::app::RACK_GRID_WIDTH));
-+            json_array_append_new(pos, json_real(mw->box.pos.y / rack::app::RACK_GRID_HEIGHT));
++            json_array_append_new(pos, json_real((mw->box.pos.x - rack::app::RACK_OFFSET.x) / rack::app::RACK_GRID_WIDTH));
++            json_array_append_new(pos, json_real((mw->box.pos.y - rack::app::RACK_OFFSET.y) / rack::app::RACK_GRID_HEIGHT));
 +            json_object_set_new(jm, "pos", pos);
 +            json_object_set_new(jm, "hp", json_integer(int(std::round(mw->box.size.x / rack::app::RACK_GRID_WIDTH))));
 +        }
@@ -479,6 +483,86 @@ index 278e36a..350c099 100644
 +    if (c == nullptr || !c->history->canRedo()) return 0;
 +    const cardinalweb::Ctx sc(c);
 +    try { c->history->redo(); } catch (const rack::Exception& e) { d_stderr("cardinalweb_redo: %s", e.what()); return 0; }
++    return 1;
++}
++
++// Every module the build can create: plugin, model, name, description, tags, manual URL.
++EMSCRIPTEN_KEEPALIVE const char* cardinalweb_get_models_json()
++{
++    json_t* const arr = json_array();
++    for (rack::plugin::Plugin* const p : rack::plugin::plugins)
++    {
++        for (rack::plugin::Model* const m : p->models)
++        {
++            if (m->hidden) continue;
++            json_t* const jm = json_object();
++            json_object_set_new(jm, "plugin", json_string(p->slug.c_str()));
++            json_object_set_new(jm, "pluginName", json_string(p->name.c_str()));
++            json_object_set_new(jm, "brand", json_string(p->brand.c_str()));
++            json_object_set_new(jm, "model", json_string(m->slug.c_str()));
++            json_object_set_new(jm, "name", json_string(m->name.c_str()));
++            json_object_set_new(jm, "description", json_string(m->description.c_str()));
++            json_object_set_new(jm, "manual", json_string(m->manualUrl.c_str()));
++            json_t* const tags = json_array();
++            for (const int t : m->tagIds) json_array_append_new(tags, json_string(rack::tag::getTag(t).c_str()));
++            json_object_set_new(jm, "tags", tags);
++            json_array_append_new(arr, jm);
++        }
++    }
++    return cardinalweb::result(arr);
++}
++
++// Add a module the way Rack's browser does; placed after the right-most module of the top row. One undo step.
++// Returns the new module id, or -1.
++EMSCRIPTEN_KEEPALIVE double cardinalweb_add_module(const char* const pluginSlug, const char* const modelSlug)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr || pluginSlug == nullptr || modelSlug == nullptr) return -1;
++    const cardinalweb::Ctx sc(c);
++    rack::plugin::Model* const model = rack::plugin::getModel(pluginSlug, modelSlug);
++    if (model == nullptr) return -1;
++    rack::engine::Module* module = nullptr;
++    rack::app::ModuleWidget* mw = nullptr;
++    try {
++        module = model->createModule();
++        c->engine->addModule(module);
++        mw = model->createModuleWidget(module);
++    } catch (const rack::Exception& e) {
++        d_stderr("cardinalweb_add_module: %s", e.what());
++        return -1;
++    }
++    if (mw == nullptr) return -1;
++    // place after the right-most module of the top-most row (widget positions include RACK_OFFSET)
++    float rowY = rack::app::RACK_OFFSET.y, right = rack::app::RACK_OFFSET.x;
++    bool any = false;
++    for (rack::widget::Widget* const w : c->scene->rack->getModuleContainer()->children)
++        if (!any || w->box.pos.y < rowY) { rowY = w->box.pos.y; any = true; }
++    for (rack::widget::Widget* const w : c->scene->rack->getModuleContainer()->children)
++        if (std::abs(w->box.pos.y - rowY) < rack::app::RACK_GRID_HEIGHT * 0.5f)
++            right = std::max(right, w->box.pos.x + w->box.size.x);
++    rack::history::ComplexAction* const h = new rack::history::ComplexAction;
++    h->name = "add module";
++    c->scene->rack->updateModuleOldPositions();
++    c->scene->rack->addModule(mw);
++    c->scene->rack->setModulePosNearest(mw, rack::math::Vec(right, rowY));
++    h->push(c->scene->rack->getModuleDragAction());
++    mw->loadTemplate();
++    rack::history::ModuleAdd* const ha = new rack::history::ModuleAdd;
++    ha->setModule(mw);
++    h->push(ha);
++    c->history->push(h);
++    return double(module->id);
++}
++
++// Remove a module and its cables as one undo step (Rack's own removeAction).
++EMSCRIPTEN_KEEPALIVE int cardinalweb_remove_module(const double moduleId)
++{
++    CardinalPluginContext* const c = cardinalweb::ctx();
++    if (c == nullptr) return 0;
++    const cardinalweb::Ctx sc(c);
++    rack::app::ModuleWidget* const mw = c->scene->rack->getModule(int64_t(moduleId));
++    if (mw == nullptr) return 0;
++    mw->removeAction();
 +    return 1;
 +}
 +

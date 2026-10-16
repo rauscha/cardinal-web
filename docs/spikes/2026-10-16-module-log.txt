@@ -1,0 +1,10 @@
+models available: 66 (Cardinal, Fundamental, AriaSalvatrice, AudibleInstruments, Bogaudio, ImpromptuModular, MockbaModular, SurgeXTRack); sample: {"plugin":"Fundamental","pluginName":"Fundamental","brand":"VCV","model":"VCF","name":"VCF","description":"Voltage-controlled filter","manual":"https://vcvrack.com/Fundamental#VCF","tags":["Filter","Polyphonic"]}
+sheet open: true, rows 66, tags 19
+search "filter": Filtah, VCF, VCF
+after adding VCF: modules 7 cards: SEQ 3 | VCO | ADSR | VCA | Audio 2 | Text Editor | VCF | undo: Undo add module
+cables after VCO -> VCF: 7
+remove chip: Remove VCF and its cables? Undo brings it back.
+after remove: modules 6, cables 6 | undo: Undo delete module
+after undo remove: modules 7, cables 7, cards 7
+after two more undos (cable, add): modules 6, cards 6
+audio: running · engine 4.1% avg / 6.9% max of real time · page frame 66.7 ms
