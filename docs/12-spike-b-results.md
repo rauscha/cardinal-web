@@ -285,3 +285,66 @@ Remaining from the original list: custom displays, audio-rate readout,
 the help drawer. Beyond that list, the card UI now needs what the shell
 plan always had: service worker for the 10 s load, install manifest,
 onboarding, and the learning content.
+
+## 11. Help drawer (test build 0.10, 2026-10-16)
+
+No engine change. The drawer is the first piece of the learning layer's
+**explanation** half (what a module and each knob does) and binds to the
+metadata the bridge already returns.
+
+**Hard fact found first.** Rack lets module authors describe every
+parameter and port in code, and the bridge exports those fields, but
+across all 66 Mini models every one is empty: 0 of 38 SEQ 3 params, 0 of
+8 VCO params, 0 jacks anywhere. Module descriptions exist for all 66 and
+manual URLs for 58 (Cardinal, Fundamental, Bogaudio, Impromptu, Aria and
+Audible link to their own docs; Surge XT and Mockba ship none). So the
+engine gives the one-liner and the link, and the per-knob and per-jack
+text had to be written. It lives in `shell/spike-b/help.json` (60 KB, CC0,
+ours), keyed `Plugin/Model` with `about`, `try`, `params`, `inputs`,
+`outputs` keyed by name or `#id`, and `names` for knobs and jacks the
+module left unnamed (dead parameter slots are dropped from the cards too,
+which also fixed an empty bar on the VCO card). Repeated knobs such as
+Surge's "Mod 1 to Pitch" or GateSeq64's 64 step buttons are covered by
+regex patterns and folded into one collapsed group per drawer. Coverage:
+module text for all 66; full knob and jack text for Fundamental, Cardinal
+host modules, Bogaudio, Impromptu, Plaits, Aria and Mockba; Surge XT has
+module text and its main controls, with the modulation matrix grouped.
+Mockba's knob names are read from its source (the panel has none);
+plugin-level manual fallbacks point Surge XT at its Rack manual and
+Mockba at its repository.
+
+**Three ways in.** The `?` button on every card, a tap on the card title,
+or a tap on any knob's label (opens with that knob highlighted and
+scrolled into view). Pressing a jack now also offers **What is this
+jack?** in the chip, which opens the drawer on that jack. Inside: the
+author's description, our paragraph, a **Try:** suggestion that refers to
+the startup patch where possible, then every knob with its live value,
+text, range and default or switch positions; then every input and output
+with its shape glyph, signal type word, live voltage, text, and where it
+is connected. Connection rows are buttons: tapping "← from SEQ 3 · CV 1"
+closes the drawer, scrolls to that card and flashes it. The Manual button
+opens the author's page in a new tab. The footer states what is the
+author's and what is ours.
+
+Verified headlessly (`docs/spikes/2026-10-16-help-log.txt`, screenshots
+`2026-10-16-help-vco.png`, `2026-10-16-help-jack.png`): VCO drawer has
+description, about, try, 6 knob rows all with text and live display
+values, 8 jack rows with correct types, "← from SEQ 3 · CV 1" and
+"→ to VCA · Channel" connections and live voltages (0.33 V on pitch,
+4.87 V on Sawtooth); the goto button closed the drawer and flashed SEQ 3;
+tapping ADSR's Attack label opened with that row highlighted; pressing a
+SEQ 3 output offered the chip button and opened on that jack with the arm
+cleared; Nimbus showed the plugin-level manual, 14 main knobs and one
+"Modulation depths (48)" group; undoing the add closed the drawer; audio
+ran throughout. Live at `/spike-b/` as test build 0.10.
+
+**Candour about the text.** It was written from knowledge of the modules
+and a read of their source, not tested knob by knob against the engine;
+the drawer says so and defers to the manual. Expect wording to need
+correction as Andrew uses it. What this does not do yet: the **build
+tutorials** half of the learning layer, and any text search across the
+help.
+
+Remaining from the original list: custom displays and audio-rate readout.
+Then the shell items: service worker, install manifest, onboarding,
+learning content.

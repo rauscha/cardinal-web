@@ -1,0 +1,1439 @@
+{
+  "_about": "Teaching text for the cardinal-web help drawer. Written for this project (CC0). Module descriptions and manual links come from the engine; everything here is ours and fills the gap Rack leaves (module authors rarely describe knobs and jacks in code). Keys: modules['Plugin/Model'] = { about, try, params{name or #id: text}, inputs{...}, outputs{...}, names{params|inputs|outputs: {id: name}} }. Patterns apply to repeated knobs (Mod 1 to X, Step 12...) on any module.",
+  "conventions": "Voltages: audio swings about ±5 V. Control voltage (CV) is usually 0 to 10 V, or ±5 V when bipolar. A gate is 10 V while something is on, 0 V when off; a trigger is a very short gate. Pitch follows 1 V per octave: +1 V doubles the frequency, 1/12 V is one semitone.",
+  "plugins": {
+    "SurgeXTRack": {
+      "manual": "https://surge-synthesizer.github.io/rack_xt_manual/",
+      "note": "Surge XT modules have four modulation inputs and a depth knob for every modulatable control. Those depth knobs are grouped below; the main controls come first."
+    },
+    "MockbaModular": {
+      "manual": "https://github.com/MockbaTheBorg/MockbaModular",
+      "note": "Mockba's tiny 2 HP modules leave most knobs unnamed in code; the names shown here are ours, taken from the source."
+    }
+  },
+  "patterns": [
+    {
+      "match": "^Mod-? ?\\d+ to ",
+      "group": "Modulation depths",
+      "text": "How far this modulation input moves the control it names. Centre is off; negative values invert the modulation."
+    },
+    {
+      "match": "^Mod ?\\d+$",
+      "group": "Modulation depths",
+      "text": "Depth for one modulation input on one control. Centre is off."
+    },
+    {
+      "match": "^Step/phrase \\d+$",
+      "group": "Step buttons",
+      "text": "One of the 64 step buttons. In sequence mode it turns the gate at that step on or off; in song mode it picks which sequence plays in that phrase."
+    },
+    {
+      "match": "^Step Trigger \\d+$",
+      "group": "Step triggers",
+      "text": "When this step is reached, fire the trigger output."
+    },
+    {
+      "match": "^(CV \\d step|Step) \\d+$",
+      "group": "Step values",
+      "text": "The voltage this step sends while the sequencer sits on it. Turn it to set the note (1/12 V per semitone) or any other value you want stepped."
+    },
+    {
+      "match": "^Gate type \\d$",
+      "group": "Gate types",
+      "text": "Chooses the rhythm pattern a step uses when its gate is on: full, half, triplets and so on."
+    },
+    {
+      "match": "^Cell \\d+$",
+      "group": "Cells",
+      "text": "One MIDI controller number mapped to a jack. Set which CC each cell listens to in the module's own panel; here the jack simply carries that controller as 0 to 10 V."
+    },
+    {
+      "match": "^Gate \\d+$",
+      "group": "Gates",
+      "text": "A gate for one MIDI note, 10 V while the key is held."
+    },
+    {
+      "match": "^Channel \\d+$",
+      "group": "Channels",
+      "text": "One voice of a polyphonic cable, as a plain mono signal."
+    },
+    {
+      "match": "^Channel \\d-\\d$",
+      "group": "Channels",
+      "text": "One voice of one of the two polyphonic banks."
+    },
+    {
+      "match": "^Signal \\d$",
+      "group": "Signals",
+      "text": "One of the switched signals."
+    },
+    {
+      "match": "^(Mix|Route) \\d$",
+      "group": "Per-input controls",
+      "text": "How much of this input reaches the output, so the module works as a selector, a crossfader or a small mixer."
+    },
+    {
+      "match": "^Target \\d$",
+      "group": "Targets",
+      "text": "The base value for this target; the four modulators are added on top at the depths set below."
+    },
+    {
+      "match": "^Modulated Target \\d$",
+      "group": "Targets",
+      "text": "Target value plus modulation, as CV."
+    },
+    {
+      "match": "^Step \\d trigger$",
+      "group": "Step triggers",
+      "text": "Whether this step fires the Trigger output when the sequencer reaches it. Off makes a rest."
+    },
+    {
+      "match": " Mute$",
+      "group": "Mute and solo",
+      "text": "Silence this source."
+    },
+    {
+      "match": " Solo$",
+      "group": "Mute and solo",
+      "text": "Hear only this source (and any other soloed one)."
+    },
+    {
+      "match": "^Unused",
+      "group": "Unused",
+      "text": "A leftover slot in the module's code; it does nothing."
+    },
+    {
+      "match": "^Modulator \\d$",
+      "text": "A modulation signal (LFO, envelope, CV). How much it moves each control is set by the matching depth knobs."
+    },
+    {
+      "match": "^Input \\d (Left|Right)$",
+      "text": "Audio into this stereo channel. Patch Left alone for a mono source."
+    },
+    {
+      "match": "^(Master clock|Clock \\d) (pulse width|swing)$",
+      "text": "CV that takes over the knob of the same name on the Clocked module to its left."
+    },
+    {
+      "match": "^Write",
+      "text": "Step entry by CV: writes the Gate input's state into the current step and moves on."
+    }
+  ],
+  "modules": {
+    "Fundamental/VCO": {
+      "about": "A voltage controlled oscillator: the sound source. It produces four waveforms at once from one pitch. Patch the Pitch jack from a sequencer or keyboard, take one waveform out to a filter or VCA.",
+      "try": "With the arpeggio running, move a cable from the Sawtooth output to the Square output and listen to the tone change. Then sweep Pulse width while Square is playing.",
+      "names": {
+        "params": {
+          "0": "",
+          "3": ""
+        }
+      },
+      "params": {
+        "Frequency": "Base pitch, in semitones away from middle C (C4, 261.6 Hz). The Pitch jack adds to this at 1 V per octave, so leave it near 0 and let the sequencer set the notes.",
+        "Sync mode": "What happens when the Sync input fires. Hard restarts the wave each time, giving the classic ripping sync tone; Soft only flips its direction.",
+        "Frequency modulation": "How much the FM input shifts the pitch. Centre is off. Small amounts from an LFO give vibrato; large amounts from another oscillator give clangorous FM timbres.",
+        "Pulse width": "Shape of the Square wave only: 50 % is a true square, towards 1 % or 99 % it becomes a thin, nasal pulse.",
+        "Pulse width modulation": "How much the PWM input moves Pulse width. A slow LFO here is the classic chorusing pulse sound.",
+        "FM mode": "1V/octave: FM shifts pitch exponentially, so the note stays in tune relative to other voices. Linear: FM adds frequency in Hz, the mode used for bell-like through-zero FM."
+      },
+      "inputs": {
+        "1V/octave pitch": "The note. Each volt doubles the frequency. Comes from a sequencer CV out, a quantizer, or a MIDI pitch out.",
+        "Frequency modulation": "A signal that wobbles the pitch, scaled by the Frequency modulation knob. LFO for vibrato, audio for FM synthesis.",
+        "Sync": "A rising edge restarts the wave. Patch another oscillator's Square here and tune this one above it.",
+        "Pulse width modulation": "Moves Pulse width, scaled by the Pulse width modulation knob."
+      },
+      "outputs": {
+        "Sine": "The purest tone, one harmonic. Smooth and quiet; good for sub bass and FM.",
+        "Triangle": "Soft, flute-like; a few odd harmonics.",
+        "Sawtooth": "Bright and full, every harmonic. The go-to wave for a filter to work on.",
+        "Square": "Hollow, clarinet-like; odd harmonics only, and the only wave Pulse width changes."
+      }
+    },
+    "Fundamental/VCF": {
+      "about": "A voltage controlled filter. It removes frequencies above (Lowpass) or below (Highpass) the cutoff, and can ring at the cutoff with resonance. Filters are where subtractive synthesis gets its character.",
+      "try": "Patch VCO Sawtooth into Audio, Lowpass into the VCA's channel input, then sweep Cutoff frequency slowly. Add Resonance and sweep again.",
+      "names": {
+        "params": {
+          "1": ""
+        }
+      },
+      "params": {
+        "Cutoff frequency": "Where the filter starts cutting. In Lowpass everything above it is darkened; in Highpass everything below. The Frequency input adds to this at 1 V per octave.",
+        "Resonance": "Emphasises frequencies right at the cutoff. Low gives a gentle tone shaper; high rings and whistles, and near maximum it self-oscillates into a sine tone.",
+        "Cutoff frequency CV": "How much the Frequency input moves the cutoff. Centre is off, negative inverts. Patch an envelope into Frequency and raise this for the classic opening-and-closing sweep.",
+        "Drive": "Gain into the filter. Pushing it adds saturation and grit before filtering.",
+        "Resonance CV": "Depth of the Resonance input.",
+        "Drive CV": "Depth of the Drive input."
+      },
+      "inputs": {
+        "Frequency": "CV that moves the cutoff, through the Cutoff frequency CV knob. Envelopes, LFOs, or the pitch CV itself so the filter tracks the notes.",
+        "Resonance": "CV for resonance, through its depth knob.",
+        "Drive": "CV for drive, through its depth knob.",
+        "Audio": "The sound to filter. Usually an oscillator or a mix of them."
+      },
+      "outputs": {
+        "Lowpass filter": "Highs removed above the cutoff: warm, round, the usual synth filter sound.",
+        "Highpass filter": "Lows removed below the cutoff: thin, bright. Both outputs run at once."
+      }
+    },
+    "Fundamental/VCA-1": {
+      "about": "A voltage controlled amplifier: a volume knob that a voltage can turn. With an envelope on CV it shapes each note; with an LFO it makes tremolo. No note has a shape without a VCA.",
+      "try": "Pull the cable out of CV and the sound stays on constantly at Level. Put it back and the envelope opens and closes it per note.",
+      "params": {
+        "Level": "Maximum gain. With nothing in CV, the signal passes at this level; with a CV patched, the CV scales from 0 up to this.",
+        "Response mode": "Linear: gain follows the CV directly. Exponential: the same CV gives a curve that feels more natural for volume, quieter for longer then swelling."
+      },
+      "inputs": {
+        "CV": "0 to 10 V controls the gain, 10 V being full Level. Envelopes and LFOs go here.",
+        "Channel": "The signal being controlled: audio from an oscillator or filter, or a CV you want to scale."
+      },
+      "outputs": {
+        "Channel": "Input times gain. Send it to the Audio module or a mixer."
+      }
+    },
+    "Fundamental/LFO": {
+      "about": "A low frequency oscillator: the same waveforms as a VCO, but running from one cycle every few minutes up to a few hundred hertz, used as a control voltage rather than heard. It is how a patch moves on its own.",
+      "try": "Patch Triangle into the VCF Frequency input and raise the filter's Cutoff frequency CV knob. Slow the LFO Frequency down to hear the sweep.",
+      "names": {
+        "params": {
+          "4": ""
+        },
+        "inputs": {
+          "1": ""
+        }
+      },
+      "params": {
+        "Offset": "Bipolar: the output swings ±5 V around zero. Unipolar: 0 to 10 V, which suits VCA and level inputs.",
+        "Invert": "Flips the waveform upside down, so a rising ramp becomes a falling one.",
+        "Frequency": "Speed, in cycles per second. 2 Hz is a fast wobble; 0.1 Hz is a ten second sweep. With a Clock patched in, this knob becomes an octave multiplier or divider of the clock.",
+        "Frequency modulation": "Depth of the FM input: lets another CV speed the LFO up and down.",
+        "Pulse width": "Shape of the Square output: how long it stays high in each cycle.",
+        "Pulse width modulation": "Depth of the PWM input."
+      },
+      "inputs": {
+        "Frequency modulation": "CV that changes the speed, through its depth knob.",
+        "Reset": "A trigger restarts the cycle from the beginning, so the LFO lines up with the beat.",
+        "Pulse width modulation": "CV for Pulse width, through its depth knob.",
+        "Clock": "Patch a clock and the LFO locks its rate to it; the Frequency knob then multiplies or divides."
+      },
+      "outputs": {
+        "Sine": "Smooth back-and-forth.",
+        "Triangle": "Smooth, linear up then down; the usual choice for filter sweeps and vibrato.",
+        "Sawtooth": "Ramps up then snaps back; rhythmic swells.",
+        "Square": "On/off; works as a slow gate or clock as well as a CV."
+      }
+    },
+    "Fundamental/ADSR": {
+      "about": "An envelope generator. When a gate arrives it rises (Attack), falls to a hold level (Decay to Sustain), and when the gate ends it fades out (Release). The output is 0 to 10 V, made to drive a VCA or a filter cutoff.",
+      "try": "Lengthen Attack to hear notes fade in. Set Sustain to 0 and shorten Decay for plucks.",
+      "params": {
+        "Attack": "Time to rise from 0 to 10 V after the gate starts. Short for percussive, long for pads.",
+        "Decay": "Time to fall from the peak to the Sustain level while the gate is still held.",
+        "Sustain": "The level held while the gate stays on, as a fraction of full. 0 gives a pluck no matter how long the key is held.",
+        "Release": "Time to fall to 0 after the gate ends.",
+        "Attack CV": "Depth of the Attack input.",
+        "Decay CV": "Depth of the Decay input.",
+        "Sustain CV": "Depth of the Sustain input.",
+        "Release CV": "Depth of the Release input.",
+        "Push": "A manual gate button: hold it to play the envelope by hand."
+      },
+      "inputs": {
+        "Attack": "CV for the attack time.",
+        "Decay": "CV for the decay time.",
+        "Sustain": "CV for the sustain level.",
+        "Release": "CV for the release time.",
+        "Gate": "The note on/off signal. High starts the envelope, low releases it. From a sequencer gate, MIDI gate or clock.",
+        "Retrigger": "A trigger here restarts the attack even while the gate is still held, for repeated notes without a gap."
+      },
+      "outputs": {
+        "Envelope": "0 to 10 V shape of the note. Into a VCA's CV for loudness, or a filter's Frequency input for tone."
+      }
+    },
+    "Fundamental/VCMixer": {
+      "about": "A four channel mixer where every channel is also a VCA. Sum sources into one signal, set each level by knob or by CV.",
+      "try": "Send two oscillators into Channel 1 and 2, the Mix out to the Audio module, and balance them.",
+      "params": {
+        "Mix level": "Overall output gain. 0 dB passes the sum unchanged.",
+        "Channel 1 level": "Gain for channel 1; above 0 dB boosts.",
+        "Channel 2 level": "Gain for channel 2.",
+        "Channel 3 level": "Gain for channel 3.",
+        "Channel 4 level": "Gain for channel 4.",
+        "Mix CV signal": "How strongly the Mix CV input scales the mix level. 100 % means 10 V gives full level.",
+        "Channel 1 CV signal": "How strongly the Channel 1 CV input scales channel 1.",
+        "Channel 2 CV signal": "Depth of Channel 2 CV.",
+        "Channel 3 CV signal": "Depth of Channel 3 CV.",
+        "Channel 4 CV signal": "Depth of Channel 4 CV."
+      },
+      "inputs": {
+        "Mix CV": "CV that controls the whole mix level; an envelope here shapes the sum.",
+        "Channel 1": "Signal into channel 1.",
+        "Channel 2": "Signal into channel 2.",
+        "Channel 3": "Signal into channel 3.",
+        "Channel 4": "Signal into channel 4.",
+        "Channel 1 CV": "CV for channel 1 level, so channel 1 works as a VCA.",
+        "Channel 2 CV": "CV for channel 2 level.",
+        "Channel 3 CV": "CV for channel 3 level.",
+        "Channel 4 CV": "CV for channel 4 level."
+      },
+      "outputs": {
+        "Mix": "All four channels summed, times Mix level.",
+        "Channel 1": "Channel 1 alone, after its level and CV.",
+        "Channel 2": "Channel 2 alone.",
+        "Channel 3": "Channel 3 alone.",
+        "Channel 4": "Channel 4 alone."
+      }
+    },
+    "Fundamental/Scope": {
+      "about": "An oscilloscope: draws voltages over time so you can see what you hear. Its screen is only on the stock canvas for now; in this view it still passes signals through.",
+      "params": {
+        "Gain 1": "Vertical zoom for channel 1, volts per screen.",
+        "Offset 1": "Shifts channel 1 up or down on screen.",
+        "Gain 2": "Vertical zoom for channel 2.",
+        "Offset 2": "Shifts channel 2 up or down.",
+        "Time": "How many milliseconds one screen width shows. Short for waveforms, long for envelopes and LFOs.",
+        "Scope mode": "1 & 2 draws both channels against time. 1 x 2 plots channel 1 against channel 2 (a Lissajous figure).",
+        "Trigger threshold": "The voltage channel 1 must cross to restart the trace, which keeps a repeating wave still on screen.",
+        "Trigger": "Whether to wait for that crossing or just scroll."
+      },
+      "inputs": {
+        "Ch 1": "Signal to view (and trigger on).",
+        "Ch 2": "Second signal to view.",
+        "External trigger": "Restart the trace from a different signal, such as a clock."
+      },
+      "outputs": {
+        "Ch 1": "Channel 1 passed through unchanged.",
+        "Ch 2": "Channel 2 passed through unchanged."
+      }
+    },
+    "Fundamental/SEQ3": {
+      "about": "An eight step sequencer with three rows of CV and a trigger per step. It walks along the steps on its own clock, sending the knob values of the current step. Row 1 to a VCO's pitch and the triggers to an envelope's gate make a melody.",
+      "try": "Change Steps to 4 and the arpeggio becomes a four note loop. Turn a step's CV 1 knob while it plays to change that note.",
+      "params": {
+        "Tempo": "Speed of the internal clock, in beats per minute. Ignored when a Clock is patched in.",
+        "Run": "Start and stop. The sequence holds its position while stopped.",
+        "Reset": "Jump back to step 1.",
+        "Steps": "How many steps play before looping: 1 to 8.",
+        "Tempo CV": "Depth of the Tempo input.",
+        "Steps CV": "Depth of the Steps input."
+      },
+      "inputs": {
+        "Tempo": "CV that changes the internal tempo.",
+        "Clock": "Advance one step per trigger from an external clock instead of the internal tempo. Lets several sequencers run in time.",
+        "Reset": "A trigger jumps to step 1, for keeping it in step with other modules.",
+        "Steps": "CV that changes the number of steps.",
+        "Run": "A trigger toggles run/stop."
+      },
+      "outputs": {
+        "Trigger": "A short pulse on every step whose trigger button is on. The usual gate source for the envelope.",
+        "CV 1": "Row 1's value for the current step. Patch to a VCO Pitch jack for notes.",
+        "CV 2": "Row 2's value: a second melody, or a filter sweep, or velocity.",
+        "CV 3": "Row 3's value.",
+        "Step 1": "10 V only while step 1 plays.",
+        "Step 2": "10 V only while step 2 plays.",
+        "Step 3": "10 V only while step 3 plays.",
+        "Step 4": "10 V only while step 4 plays.",
+        "Step 5": "10 V only while step 5 plays.",
+        "Step 6": "10 V only while step 6 plays.",
+        "Step 7": "10 V only while step 7 plays.",
+        "Step 8": "10 V only while step 8 plays.",
+        "Steps": "The Steps setting as a voltage: number of steps minus one, so 8 steps gives 7 V. Patch it into another SEQ 3's Steps input to keep both the same length.",
+        "Clock": "The clock, internal or passed through, for driving other modules.",
+        "Run": "10 V while running.",
+        "Reset": "Passes the reset trigger on."
+      }
+    },
+    "Fundamental/SequentialSwitch1": {
+      "about": "One input, four outputs: each clock pulse sends the input to the next output in turn. Use it to spread one sequence across several destinations.",
+      "params": {
+        "Steps": "How many outputs to cycle through before returning to the first."
+      },
+      "inputs": {
+        "Clock": "Advance to the next output.",
+        "Reset": "Return to output 1.",
+        "Main": "The signal being routed."
+      },
+      "outputs": {
+        "Channel 1": "Receives the input on step 1.",
+        "Channel 2": "Step 2.",
+        "Channel 3": "Step 3.",
+        "Channel 4": "Step 4."
+      }
+    },
+    "Fundamental/SequentialSwitch2": {
+      "about": "Four inputs, one output: each clock pulse picks the next input. Four different CVs clocked here make a four step sequence of whatever you patch in.",
+      "params": {
+        "Steps": "How many inputs to cycle through."
+      },
+      "inputs": {
+        "Clock": "Advance to the next input.",
+        "Reset": "Return to input 1.",
+        "Channel 1": "Picked on step 1.",
+        "Channel 2": "Step 2.",
+        "Channel 3": "Step 3.",
+        "Channel 4": "Step 4."
+      },
+      "outputs": {
+        "Main": "Whichever input is currently selected."
+      }
+    },
+    "Fundamental/Quantizer": {
+      "about": "Rounds pitch CV to the nearest note of a scale, so a random or smoothly changing voltage plays in tune. The notes in the scale are chosen on the stock canvas for now.",
+      "params": {
+        "Pre-offset": "Shift the input by semitones before rounding, to transpose."
+      },
+      "inputs": {
+        "1V/octave pitch": "Any CV you want turned into notes: an LFO, a random voltage, a sequencer row."
+      },
+      "outputs": {
+        "Pitch": "The rounded pitch, 1 V per octave, ready for a VCO."
+      }
+    },
+    "Fundamental/Split": {
+      "about": "Breaks a polyphonic cable (up to 16 voices in one wire) into separate mono outputs.",
+      "inputs": {
+        "Polyphonic": "A polyphonic cable."
+      },
+      "outputs": {}
+    },
+    "Fundamental/Merge": {
+      "about": "Combines up to 16 mono signals into one polyphonic cable.",
+      "inputs": {},
+      "outputs": {
+        "Polyphonic": "A polyphonic cable carrying every patched input as a voice."
+      }
+    },
+    "Fundamental/Sum": {
+      "about": "Adds all voices of a polyphonic cable into one mono signal. The quick way to hear a polyphonic patch through a mono output.",
+      "params": {
+        "Level": "Gain applied to the sum."
+      },
+      "inputs": {
+        "Polyphonic": "Polyphonic signal to sum."
+      },
+      "outputs": {
+        "Monophonic": "All voices added together."
+      }
+    },
+    "Fundamental/MidSide": {
+      "about": "Converts stereo between left/right and mid/side, and back. Mid is what both channels share, side is what differs; widening or narrowing side changes the stereo width.",
+      "params": {
+        "Encoder width": "Scales the side signal when encoding: 0 % collapses to mono, 200 % exaggerates the stereo.",
+        "Decoder width": "Scales side when decoding back to left/right."
+      },
+      "inputs": {
+        "Encoder width": "CV for encoder width.",
+        "Encoder left": "Left channel in.",
+        "Encoder right": "Right channel in.",
+        "Decoder width": "CV for decoder width.",
+        "Decoder mid": "Mid signal to decode.",
+        "Decoder sides": "Side signal to decode."
+      },
+      "outputs": {
+        "Encoder mid": "(L + R) / 2.",
+        "Encoder sides": "(L − R) / 2 times width.",
+        "Decoder left": "Mid + sides.",
+        "Decoder right": "Mid − sides."
+      }
+    },
+    "Fundamental/Noise": {
+      "about": "Seven colours of noise, each with a different balance of low and high frequencies. Noise is the raw material for percussion, wind and breath, and for random voltages when sampled.",
+      "outputs": {
+        "White noise": "Equal energy at every frequency; hissy.",
+        "Pink noise": "Equal energy per octave; sounds balanced, like rain.",
+        "Red noise": "Rumbly, mostly lows (also called brown).",
+        "Violet noise": "Mostly highs, very bright.",
+        "Blue noise": "Tilted towards highs.",
+        "Gray noise": "Shaped to sound flat to the ear.",
+        "Black noise": "Sparse, mostly silence with rare crackles."
+      }
+    },
+    "Fundamental/Random": {
+      "about": "A random voltage generator with its own clock. Every clock tick it picks a new value, and gives it to you stepped, or smoothed in three different ways. The source of happy accidents in a patch.",
+      "try": "Patch Stepped into the Quantizer, the Quantizer into a VCO Pitch jack, and Trigger into an envelope Gate: a random melody in tune.",
+      "names": {
+        "params": {
+          "3": ""
+        }
+      },
+      "params": {
+        "Clock rate": "How often a new value is chosen, when no external Trigger is patched.",
+        "Shape": "For the smoothed outputs, how the move from one value to the next is curved.",
+        "Offset": "Bipolar (±5 V) or unipolar (0 to 10 V) output.",
+        "Trigger probability": "Chance that a clock tick actually produces a new value. Below 100 % the pattern becomes irregular.",
+        "Random spread": "How far a new value may land from the previous one. Low gives a wandering line, high gives jumps.",
+        "Clock rate CV": "Depth of the Clock rate input.",
+        "Shape CV": "Depth of the Shape input.",
+        "Trigger probability CV": "Depth of the probability input.",
+        "Random spread CV": "Depth of the spread input."
+      },
+      "inputs": {
+        "Clock rate": "CV for the internal clock speed.",
+        "Shape": "CV for shape.",
+        "Trigger": "External clock: a new value on each trigger, replacing the internal clock.",
+        "External": "Sample this voltage instead of generating a random one: turns the module into a sample and hold.",
+        "Trigger probability": "CV for probability.",
+        "Random spread": "CV for spread."
+      },
+      "outputs": {
+        "Stepped": "Jumps straight to each new value and holds it.",
+        "Linear": "Glides to each new value in a straight line.",
+        "Smooth": "Glides with an S-curve.",
+        "Exponential": "Glides fast at first then slows.",
+        "Trigger": "A pulse whenever a new value is chosen; use it as the gate for the note it makes."
+      }
+    },
+    "Cardinal/HostAudio2": {
+      "about": "The way out: whatever reaches the two inputs goes to the speaker or headphones, left and right. Every patch needs one of these. The outputs would carry sound from the host; in the browser there is no audio input, so they stay silent.",
+      "names": {
+        "inputs": {
+          "0": "Left",
+          "1": "Right"
+        },
+        "outputs": {
+          "0": "Left in (none in browser)",
+          "1": "Right in (none in browser)"
+        }
+      },
+      "params": {
+        "Level": "Output volume in decibels. 0 dB is unchanged; keep the glyph's meter out of the white."
+      },
+      "inputs": {
+        "#0": "Left speaker. Patch a mono signal here alone and you will only hear the left side; patch it to both for centre.",
+        "#1": "Right speaker."
+      },
+      "outputs": {
+        "#0": "Audio coming in from the host, left. Silent in the browser.",
+        "#1": "Host audio in, right. Silent in the browser."
+      }
+    },
+    "Cardinal/HostCV": {
+      "about": "Control voltages exchanged with a host DAW when Cardinal runs as a plugin. In the browser nothing is connected to the other side, so these jacks do nothing useful here.",
+      "params": {
+        "Bipolar Inputs": "Treat the host's inputs as ±5 V instead of 0 to 10 V.",
+        "Bipolar Inputs 6-10": "Same, for inputs 6 to 10.",
+        "Bipolar Outputs": "Send ±5 V instead of 0 to 10 V.",
+        "Bipolar Outputs 6-10": "Same, for outputs 6 to 10."
+      }
+    },
+    "Cardinal/HostMIDI": {
+      "about": "MIDI in and out. With a keyboard or controller connected (Android or desktop; iOS Safari has no Web MIDI), the outputs turn its notes into pitch and gate for the patch. The inputs send MIDI back out, which the browser build does not use.",
+      "outputs": {
+        "1V/octave pitch": "The last played note as pitch CV. Into a VCO's Pitch jack.",
+        "Gate": "10 V while a key is held. Into an envelope's Gate.",
+        "Velocity": "How hard the key was hit, 0 to 10 V. Into a VCA CV or filter CV for expression.",
+        "Aftertouch": "Pressure after the key is down, if the keyboard sends it.",
+        "Pitchbend": "The bend wheel, ±5 V.",
+        "Mod wheel": "The modulation wheel, 0 to 10 V.",
+        "Retrigger": "A pulse on each new note, for restarting envelopes during legato.",
+        "Clock": "MIDI clock pulses from the controller or DAW.",
+        "Clock divider": "MIDI clock divided down, set on the module's panel.",
+        "Start trigger": "Pulse when MIDI start arrives.",
+        "Stop trigger": "Pulse on MIDI stop.",
+        "Continue trigger": "Pulse on MIDI continue."
+      },
+      "inputs": {
+        "1V/octave pitch": "Pitch CV to send out as MIDI notes.",
+        "Gate": "Gate for the outgoing notes.",
+        "Velocity": "Velocity for outgoing notes.",
+        "Aftertouch": "Outgoing aftertouch.",
+        "Pitchbend": "Outgoing pitch bend.",
+        "Mod wheel": "Outgoing mod wheel.",
+        "Clock": "Outgoing MIDI clock.",
+        "Volume": "Outgoing volume CC.",
+        "Pan": "Outgoing pan CC.",
+        "Start trigger": "Send MIDI start.",
+        "Stop trigger": "Send MIDI stop.",
+        "Continue trigger": "Send MIDI continue."
+      }
+    },
+    "Cardinal/HostMIDICC": {
+      "about": "Sixteen MIDI continuous controllers (knobs and sliders on a controller) as CVs, 0 to 10 V, plus channel pressure and pitch bend. Which CC number each cell listens to is set on the module's own panel.",
+      "inputs": {
+        "Channel pressure": "Outgoing channel pressure.",
+        "Pitchbend": "Outgoing pitch bend."
+      },
+      "outputs": {
+        "Channel pressure": "Incoming channel pressure as CV.",
+        "Pitchbend": "Incoming pitch bend as ±5 V."
+      }
+    },
+    "Cardinal/HostMIDIGate": {
+      "about": "Eighteen gates, one per chosen MIDI note: a drum pad controller becomes eighteen trigger sources. Note assignment is on the module's own panel."
+    },
+    "Cardinal/HostMIDIMap": {
+      "about": "Maps incoming MIDI controllers directly onto knobs in the patch, without cables. Mapping is done on the stock canvas: pick a slot, move a knob, move the controller."
+    },
+    "Cardinal/HostParameters": {
+      "about": "The 24 automatable parameters a host DAW exposes when Cardinal is a plugin, as CV outputs. In the browser there is no host, so they sit at 0 V."
+    },
+    "Cardinal/HostParametersMap": {
+      "about": "Maps host plugin parameters onto knobs without cables. Needs a host DAW; nothing to do in the browser."
+    },
+    "Cardinal/HostTime": {
+      "about": "Transport and tempo from the host, as gates and CVs. Standalone (including in the browser) Cardinal keeps its own transport, so the beat and bar pulses here can clock a patch even with no DAW.",
+      "names": {
+        "outputs": {
+          "0": "Rolling",
+          "1": "Reset",
+          "2": "Bar",
+          "3": "Beat",
+          "4": "Clock (tick)",
+          "5": "Bar phase",
+          "6": "Beat phase",
+          "7": "BPM"
+        }
+      },
+      "outputs": {
+        "#0": "10 V while the transport is playing.",
+        "#1": "A pulse when the transport restarts.",
+        "#2": "A pulse at the start of every bar.",
+        "#3": "A pulse on every beat: a clock at the tempo.",
+        "#4": "A faster pulse, several per beat (the division is set on the module's panel).",
+        "#5": "Ramps 0 to 10 V across each bar.",
+        "#6": "Ramps 0 to 10 V across each beat.",
+        "#7": "Tempo as CV: log2 of BPM over 120, so 120 BPM is 0 V and 240 BPM is 1 V."
+      }
+    },
+    "Cardinal/TextEditor": {
+      "about": "A notepad inside the patch. Nothing in the signal path; the startup patch uses it for its description. Editing happens on the stock canvas."
+    },
+    "AriaSalvatrice/Spleet": {
+      "about": "Two polyphonic inputs, each split into four mono outputs. If only the first is patched, it splits into eight. Can sort voices by voltage so the lowest note is always on the first output.",
+      "params": {
+        "Sort voltages on both banks": "When on, the voices are reordered lowest to highest before being split."
+      },
+      "inputs": {
+        "Channel 1": "Polyphonic bank 1 (or all eight voices when bank 2 is empty).",
+        "Channel 2": "Polyphonic bank 2."
+      }
+    },
+    "AriaSalvatrice/Swerge": {
+      "about": "Eight mono inputs merged into two polyphonic outputs of four voices each (or one of eight), with optional sorting by voltage.",
+      "params": {
+        "Sort voltages on both banks": "Reorder the merged voices lowest to highest."
+      },
+      "outputs": {
+        "Channel 1": "Polyphonic bank 1.",
+        "Channel 2": "Polyphonic bank 2."
+      }
+    },
+    "AudibleInstruments/Plaits": {
+      "about": "A port of Mutable Instruments Plaits: sixteen synthesis engines in one oscillator, from virtual analogue and FM to strings, chords, speech and drums. Each engine reinterprets the same three knobs (Harmonics, Timbre, Morph), so learn one engine well and the others follow. It has a built-in lowpass gate, so a trigger alone can play a complete note.",
+      "try": "Patch a sequencer Trigger into Trigger and its CV into Pitch, nothing on Level: Plaits plays plucked notes on its own. Then step through engines with the two model buttons.",
+      "params": {
+        "Pitched models": "Step to the next pitched engine (analogue waveforms, waveshaper, FM, grains, additive, wavetable, chords, speech).",
+        "Noise/percussive models": "Step to the next noise or percussion engine (filtered noise, particles, string, modal, bass drum, snare, hi-hat).",
+        "Frequency": "Coarse pitch, with the Pitch jack added at 1 V per octave.",
+        "Harmonics": "Spectral content: for analogue engines the mix of waves, for FM the ratio, for chords the chord type. The knob to turn first in a new engine.",
+        "Timbre": "The engine's main tone control: pulse width, wavefolding, FM index, string brightness and so on.",
+        "Morph": "The engine's secondary dimension: morphs between variants, decay, structure.",
+        "Timbre CV": "Depth of the Timbre input.",
+        "Frequency CV": "Depth of the FM input.",
+        "Morph CV": "Depth of the Morph input.",
+        "Lowpass gate response": "How the internal lowpass gate responds to a trigger: from a pure VCA (only loudness) to a VCF (loudness and brightness together, like a plucked string).",
+        "Lowpass gate decay": "How long each triggered note rings."
+      },
+      "inputs": {
+        "Model": "CV selects the engine, so a sequencer can switch sounds per step.",
+        "Timbre": "CV for Timbre.",
+        "FM": "Pitch modulation, through the Frequency CV knob.",
+        "Morph": "CV for Morph.",
+        "Harmonics": "CV for Harmonics.",
+        "Trigger": "Starts a note through the internal lowpass gate. Patch this and you do not need an external envelope and VCA.",
+        "Level": "0 to 10 V opens the lowpass gate directly, like an external envelope; also controls the strike strength of percussive engines.",
+        "Pitch (1V/oct)": "The note."
+      },
+      "outputs": {
+        "Main": "The engine's main sound.",
+        "Auxiliary": "A second flavour of the same engine: a sub oscillator, the raw excitation, a different mix. Often worth a listen."
+      }
+    },
+    "Bogaudio/Bogaudio-VCO": {
+      "about": "Bogaudio's oscillator: four waveforms, a fine tune knob, built-in FM depth and a slow mode that turns it into an LFO.",
+      "params": {
+        "Frequency": "Coarse pitch.",
+        "Fine tune": "Small pitch adjustment, within a semitone, for detuning against another oscillator.",
+        "Slow mode": "Drops the whole range into LFO speeds.",
+        "Pulse width": "Shape of the square wave.",
+        "FM depth": "How much the FM input shifts the pitch.",
+        "FM mode": "Exponential (in tune, musical) or linear (through-zero style timbres) FM.",
+        "Linear frequency": "Makes the Frequency knob linear in Hz instead of in semitones, useful at LFO rates."
+      },
+      "inputs": {
+        "Pitch (1V/octave)": "The note.",
+        "Sync": "Restart the wave on each rising edge.",
+        "Pulse width CV": "Moves the pulse width.",
+        "Frequency modulation": "Pitch modulation, through FM depth."
+      },
+      "outputs": {
+        "Square signal": "Hollow, odd harmonics; pulse width applies.",
+        "Saw signal": "Bright, full.",
+        "Triangle signal": "Soft.",
+        "Sine signal": "Pure."
+      }
+    },
+    "Bogaudio/Bogaudio-LFO": {
+      "about": "Bogaudio's LFO: six shapes including a stepped random, with offset and scale knobs so the output lands exactly in the range the destination wants.",
+      "params": {
+        "Frequency": "Speed; the Pitch input adds to it at 1 V per octave.",
+        "Slow": "Ten times slower overall, for minute-long sweeps.",
+        "Output sampling": "Chops the smooth waves into steps; higher values give coarser, more stepped CV.",
+        "Pulse width": "Shape of the Square output.",
+        "Offset": "Shifts all outputs up or down in volts.",
+        "Scale": "Attenuates all outputs; turn it down for subtle modulation.",
+        "Smoothing": "Rounds the corners of the waves, including the stepped output."
+      },
+      "inputs": {
+        "Sample CV": "CV for Output sampling.",
+        "Pulse width CV": "CV for pulse width.",
+        "Offset CV": "CV for offset.",
+        "Scale CV": "CV for scale.",
+        "Pitch (1V/octave)": "CV that changes the speed in octaves.",
+        "Reset": "Restart the cycle."
+      },
+      "outputs": {
+        "Ramp up": "Rising sawtooth.",
+        "Ramp down": "Falling sawtooth.",
+        "Square": "On/off.",
+        "Triangle": "Up then down.",
+        "Sine": "Smooth.",
+        "Stepped": "A new random level each cycle, held."
+      }
+    },
+    "Bogaudio/Bogaudio-VCF": {
+      "about": "A multimode filter: lowpass, highpass, bandpass or band reject from one output, with a variable slope. The Mode switch is what makes it different from Fundamental's VCF.",
+      "params": {
+        "Center/cutoff frequency": "Where the filter acts: the cutoff for low- and highpass, the centre for bandpass and band reject.",
+        "Frequency CV attenuation": "Depth of the Cutoff CV input.",
+        "FM": "Depth of the Cutoff FM input.",
+        "Resonance / bandwidth": "Resonance at the cutoff, or the width of the band in bandpass modes.",
+        "Mode": "Lowpass, highpass, bandpass or band reject (notch).",
+        "Slope": "Steepness of the cut, in poles. Steeper removes more just past the cutoff."
+      },
+      "inputs": {
+        "Cutoff CV": "CV for the cutoff, through its attenuator.",
+        "Cutoff FM": "Fast modulation of the cutoff, through FM.",
+        "Cutoff pitch (1V/octave)": "Make the cutoff follow the note by patching the same pitch CV the oscillator gets.",
+        "Signal": "The sound to filter.",
+        "Resonance CV": "CV for resonance.",
+        "Slope CV": "CV for slope."
+      },
+      "outputs": {
+        "Signal": "The filtered sound."
+      }
+    },
+    "Bogaudio/Bogaudio-AD": {
+      "about": "An attack/decay envelope: a trigger makes one rise and fall, with no sustain. Simpler than an ADSR and right for percussion; set it to loop and it is an LFO with adjustable shape.",
+      "params": {
+        "Attack": "Rise time.",
+        "Decay": "Fall time.",
+        "Loop": "Retrigger itself when the decay ends, turning it into a cycling LFO.",
+        "Linear": "Straight-line segments instead of curved.",
+        "Retrigger": "Allow a new trigger to restart the attack mid-envelope."
+      },
+      "inputs": {
+        "Trigger": "Fire the envelope.",
+        "Attack CV": "CV for attack time.",
+        "Decay CV": "CV for decay time."
+      },
+      "outputs": {
+        "Envelope": "0 to 10 V.",
+        "End-of-cycle trigger": "A pulse when the decay finishes; chain to another AD or a sequencer."
+      }
+    },
+    "Bogaudio/Bogaudio-RGate": {
+      "about": "A clock divider and multiplier with a gate length control. Feed it the master clock and get a slower or faster clock out with gates as long or short as you like.",
+      "params": {
+        "Gate length": "How long each output gate stays high, as a fraction of the period.",
+        "Clock division": "Output one gate every N incoming clocks.",
+        "Clock multiplication": "Output N gates per incoming clock."
+      },
+      "inputs": {
+        "Length CV": "CV for gate length.",
+        "Clock divider CV": "CV for division.",
+        "Reset": "Restart the count.",
+        "Clock multiplier CV": "CV for multiplication.",
+        "Clock": "The clock to divide or multiply."
+      },
+      "outputs": {
+        "Gate": "The new clock."
+      }
+    },
+    "Bogaudio/Bogaudio-Noise": {
+      "about": "Noise in five colours plus a utility that takes the absolute value of any signal.",
+      "inputs": {
+        "Absolute value": "Any signal; its negative half is flipped positive."
+      },
+      "outputs": {
+        "White noise": "Flat, hissy.",
+        "Pink noise": "Balanced, like rain.",
+        "Red noise": "Rumbly.",
+        "Gaussian noise": "White noise with a bell-curve distribution.",
+        "Absolute value": "The rectified input.",
+        "Blue noise": "Bright."
+      }
+    },
+    "Bogaudio/Bogaudio-SampleHold": {
+      "about": "Two sample-and-hold circuits. On each trigger the output grabs the input's voltage and holds it until the next trigger. Noise in, clock on trigger: a classic random stepped CV.",
+      "names": {
+        "outputs": {
+          "0": "Output 1",
+          "1": "Output 2"
+        }
+      },
+      "params": {
+        "Trigger 1": "Manual trigger for circuit 1.",
+        "Trigger 2": "Manual trigger for circuit 2.",
+        "Track 1": "Track and hold instead: follow the input while the gate is high, hold when low.",
+        "Track 2": "Same for circuit 2.",
+        "Invert 1": "Flip output 1.",
+        "Invert 2": "Flip output 2."
+      },
+      "inputs": {
+        "Trigger 1": "When to sample circuit 1.",
+        "Signal 1": "What to sample (noise if nothing is patched).",
+        "Trigger 2": "When to sample circuit 2.",
+        "Signal 2": "What circuit 2 samples."
+      },
+      "outputs": {
+        "#0": "Held voltage from circuit 1.",
+        "#1": "Held voltage from circuit 2."
+      }
+    },
+    "Bogaudio/Bogaudio-VCA": {
+      "about": "Two VCAs in 3 HP. Each has a level knob and a CV input that scales it.",
+      "params": {
+        "Level 1": "Gain for channel 1.",
+        "Level 2": "Gain for channel 2.",
+        "Linear": "Linear instead of exponential response to CV."
+      },
+      "inputs": {
+        "Level 1 CV": "CV controlling channel 1 gain.",
+        "Signal 1": "Signal into channel 1.",
+        "Level 2 CV": "CV for channel 2.",
+        "Signal 2": "Signal into channel 2."
+      },
+      "outputs": {
+        "Signal 1": "Channel 1 out.",
+        "Signal 2": "Channel 2 out."
+      }
+    },
+    "Bogaudio/Bogaudio-Switch81": {
+      "about": "Eight inputs to one output with a level knob per input. Use it as a mixer, or as a selector by leaving one knob up at a time; the panel's select CV picks inputs by voltage.",
+      "outputs": {
+        "Signal": "The selected or mixed inputs."
+      }
+    },
+    "Bogaudio/Bogaudio-Switch18": {
+      "about": "One input to eight outputs, with a route knob per output. The mirror of SWITCH81: send one signal to several places, or to one of several places by CV.",
+      "inputs": {
+        "Signal": "The signal to distribute."
+      }
+    },
+    "Bogaudio/Bogaudio-AddrSeq": {
+      "about": "An eight step CV sequencer that can also be addressed directly: instead of stepping on a clock, a CV can choose which step's value appears. Eight knobs, one output.",
+      "params": {
+        "Steps": "How many steps before looping.",
+        "Direction": "Forward, backward or back-and-forth.",
+        "Select step": "Manually choose the step; the Select CV input adds to it."
+      },
+      "inputs": {
+        "Clock": "Advance a step.",
+        "Reset": "Back to step 1.",
+        "Select CV": "Choose a step by voltage; with no clock this makes it a CV-to-CV lookup table."
+      },
+      "outputs": {
+        "Sequence": "The current step's voltage."
+      }
+    },
+    "Bogaudio/Bogaudio-AddrSeqX": {
+      "about": "Expander for ADDR-SEQ: eight more steps. Must sit directly to the right of an ADDR-SEQ on the stock canvas to do anything."
+    },
+    "Bogaudio/Bogaudio-Unison": {
+      "about": "Turns one pitch and gate into a polyphonic cable of several detuned copies, for thick unison sounds from a polyphonic oscillator.",
+      "params": {
+        "Channels": "How many voices to make.",
+        "Detune": "How far apart the voices are spread in pitch."
+      },
+      "inputs": {
+        "Detune CV": "CV for detune.",
+        "Pitch (1V/octave)": "The note to copy.",
+        "Gate": "The gate to copy to every voice."
+      },
+      "outputs": {
+        "Pitch (1V/octave)": "Polyphonic pitch, one detuned copy per voice.",
+        "Gate": "Polyphonic gate."
+      }
+    },
+    "Bogaudio/Bogaudio-Offset": {
+      "about": "Adds a voltage to a signal and scales it. The tool for getting a CV into the range a destination wants, or for making a constant voltage with nothing patched in.",
+      "params": {
+        "Offset": "Volts added to the signal.",
+        "Scale": "Multiplier applied after the offset; negative inverts."
+      },
+      "inputs": {
+        "Offset CV": "CV for offset.",
+        "Scale CV": "CV for scale.",
+        "Signal": "The signal to shift; leave empty to output a steady voltage."
+      },
+      "outputs": {
+        "Signal": "(input + offset) × scale."
+      }
+    },
+    "Bogaudio/Bogaudio-Slew": {
+      "about": "A slew limiter: it refuses to let a voltage change faster than a set rate, separately for rising and falling. On a pitch CV it is portamento; on a gate it becomes a simple envelope.",
+      "try": "Patch the sequencer's CV 1 through Slew before the VCO Pitch jack and raise Rise and Fall: the notes glide into each other.",
+      "params": {
+        "Rise": "How long an upward step takes.",
+        "Rise shape": "Curve of the rise, from logarithmic through linear to exponential.",
+        "Fall": "How long a downward step takes.",
+        "Fall shape": "Curve of the fall.",
+        "Slow mode": "Much longer times."
+      },
+      "inputs": {
+        "Rise CV": "CV for rise time.",
+        "Fall CV": "CV for fall time.",
+        "Signal": "The voltage to smooth."
+      },
+      "outputs": {
+        "Signal": "The smoothed voltage."
+      }
+    },
+    "Bogaudio/Bogaudio-Switch": {
+      "about": "A two channel A/B switch controlled by a gate. Each channel passes its High input while the gate is on and its Low input while it is off.",
+      "params": {
+        "Gate": "Manual gate button.",
+        "Latch": "Each gate pulse toggles the switch instead of following the gate level."
+      },
+      "inputs": {
+        "Gate": "Controls both channels.",
+        "High 1 signal": "Channel 1 when the gate is high.",
+        "Low 1 signal": "Channel 1 when the gate is low.",
+        "Hight 2 signal": "Channel 2 when the gate is high.",
+        "Low 2 signal": "Channel 2 when the gate is low."
+      },
+      "outputs": {
+        "Signal 1": "Channel 1.",
+        "Signal 2": "Channel 2."
+      }
+    },
+    "ImpromptuModular/Clocked": {
+      "about": "A master clock with three derived clocks, each at its own ratio of the master, with swing, pulse width and delay per clock. The heart of a rhythm patch: one tempo, several related pulses.",
+      "try": "Set Clk 1 ratio to 1, Clk 2 to 1/2 and Clk 3 to 4, then patch each to a different envelope: a kick, a half-time hat and a sixteenth note shaker from one tempo.",
+      "params": {
+        "Master clock": "Tempo in BPM.",
+        "Clk 1 ratio": "Clock 1 as a multiple or division of the master.",
+        "Clk 2 ratio": "Clock 2 ratio.",
+        "Clk 3 ratio": "Clock 3 ratio.",
+        "Swing clk": "Delay every other master pulse for a shuffle feel.",
+        "Swing clk 1": "Swing for clock 1.",
+        "Swing clk 2": "Swing for clock 2.",
+        "Swing clk 3": "Swing for clock 3.",
+        "Pulse width clk": "How long the master gate stays high.",
+        "Pulse width clk 1": "Gate length of clock 1.",
+        "Pulse width clk 2": "Gate length of clock 2.",
+        "Pulse width clk 3": "Gate length of clock 3.",
+        "Reset": "Restart all clocks together.",
+        "Run": "Start and stop.",
+        "Delay clk 1": "Shift clock 1 later by a fraction of a beat.",
+        "Delay clk 2": "Delay for clock 2.",
+        "Delay clk 3": "Delay for clock 3.",
+        "Bpm mode prev": "Step the external clock mode back (how the BPM CV input is interpreted).",
+        "Bpm mode next": "Step the external clock mode forward."
+      },
+      "inputs": {
+        "Reset": "Restart on a trigger.",
+        "Run": "Toggle run on a trigger.",
+        "BPM CV / Ext clock": "Set the tempo by CV, or follow an external clock, depending on the BPM mode."
+      },
+      "outputs": {
+        "Master clock": "The master pulse.",
+        "Clock 1": "Derived clock 1.",
+        "Clock 2": "Derived clock 2.",
+        "Clock 3": "Derived clock 3.",
+        "Reset": "Reset pulse, to pass on to sequencers.",
+        "Run": "10 V while running.",
+        "BPM CV / Ext clock thru": "The BPM input passed through, for chaining."
+      }
+    },
+    "ImpromptuModular/Clocked-Expander": {
+      "about": "Expander for Clocked: CV control over each clock's pulse width and swing. Must sit directly right of Clocked on the stock canvas."
+    },
+    "ImpromptuModular/Clocked-Clkd": {
+      "about": "The compact Clocked: master tempo and three ratio clocks, without swing, pulse width or delay.",
+      "params": {
+        "Clk 1 ratio": "Clock 1 relative to the master.",
+        "Clk 2 ratio": "Clock 2 ratio.",
+        "Clk 3 ratio": "Clock 3 ratio.",
+        "Master clock": "Tempo in BPM.",
+        "Reset": "Restart.",
+        "Run": "Start/stop.",
+        "Bpm mode prev": "External clock mode back.",
+        "Bpm mode next": "External clock mode forward.",
+        "Display prev": "Cycle the panel display.",
+        "Display next": "Cycle the panel display."
+      },
+      "inputs": {
+        "Reset": "Restart on trigger.",
+        "Run": "Toggle run.",
+        "BPM CV / Ext clock": "Tempo CV or external clock."
+      },
+      "outputs": {
+        "Master clock": "Master pulse.",
+        "Clock 1": "Clock 1.",
+        "Clock 2": "Clock 2.",
+        "Clock 3": "Clock 3.",
+        "Reset": "Reset pulse.",
+        "Run": "Run gate.",
+        "BPM CV / Ext clock thru": "BPM input passed through."
+      }
+    },
+    "ImpromptuModular/Gate-Seq-64": {
+      "about": "A 64 step gate sequencer for rhythm: four tracks of up to 16 steps (or fewer tracks with more steps), each step a gate on or off with a choice of gate pattern and probability. Drive it from Clocked and patch each track to a drum voice's trigger.",
+      "params": {
+        "Length / run mode": "Set the sequence length, or the run direction.",
+        "Run": "Start/stop.",
+        "Configuration": "How the 64 buttons are divided: 4 tracks × 16, 2 × 32 or 1 × 64.",
+        "Copy": "Copy the current sequence.",
+        "Paste": "Paste it.",
+        "Reset": "Back to step 1.",
+        "Probability": "Chance a step's gate fires, for the selected step.",
+        "Seq/song mode": "Edit one sequence, or chain sequences into a song.",
+        "Sequence": "Which of the stored sequences is shown.",
+        "Copy-paste mode": "What copy and paste carry."
+      },
+      "inputs": {
+        "Clock": "Advance a step.",
+        "Reset": "Back to step 1.",
+        "Run": "Toggle run.",
+        "Seq#": "Choose the sequence by CV."
+      },
+      "outputs": {
+        "Track 1 gate": "Gates from track 1.",
+        "Track 2 gate": "Track 2.",
+        "Track 3 gate": "Track 3.",
+        "Track 4 gate": "Track 4."
+      }
+    },
+    "ImpromptuModular/Gate-Seq-64-Expander": {
+      "about": "Expander for GateSeq64: CV inputs for writing steps and probability. Must sit directly right of GateSeq64 on the stock canvas."
+    },
+    "MockbaModular/Filtah": {
+      "about": "A tiny filter: lowpass, highpass or bandpass with cutoff, resonance and output gain.",
+      "names": {
+        "params": {
+          "0": "Type",
+          "1": "Cutoff",
+          "2": "Resonance",
+          "3": "Output gain"
+        },
+        "inputs": {
+          "0": "Cutoff CV",
+          "1": "Resonance CV",
+          "2": "Signal"
+        },
+        "outputs": {
+          "0": "Signal"
+        }
+      },
+      "params": {
+        "#0": "Lowpass, highpass or bandpass.",
+        "#1": "Cutoff, as a percentage of the range.",
+        "#2": "Resonance.",
+        "#3": "Output gain in dB."
+      },
+      "inputs": {
+        "#0": "CV for cutoff.",
+        "#1": "CV for resonance.",
+        "#2": "The sound to filter."
+      },
+      "outputs": {
+        "#0": "Filtered sound."
+      }
+    },
+    "MockbaModular/Mixah": {
+      "about": "A two input crossfader with a VCA: blend A and B by knob or CV, then scale the result.",
+      "names": {
+        "params": {
+          "0": "A/B mix"
+        },
+        "inputs": {
+          "0": "Mix CV",
+          "1": "VCA CV",
+          "2": "A",
+          "3": "B"
+        },
+        "outputs": {
+          "0": "Mix"
+        }
+      },
+      "params": {
+        "#0": "0 is all A, 1 is all B.",
+        "B Phase": "Invert B before mixing, so equal signals cancel."
+      },
+      "inputs": {
+        "#0": "CV for the mix position.",
+        "#1": "CV that scales the output, like a VCA.",
+        "#2": "Input A.",
+        "#3": "Input B."
+      },
+      "outputs": {
+        "#0": "The blend."
+      }
+    },
+    "MockbaModular/Shapah": {
+      "about": "A tiny ADSR envelope.",
+      "names": {
+        "inputs": {
+          "0": "Gate",
+          "1": "Retrigger"
+        },
+        "outputs": {
+          "0": "Envelope"
+        }
+      },
+      "params": {
+        "Attack": "Rise time.",
+        "Decay": "Fall to sustain.",
+        "Sustain": "Held level.",
+        "Release": "Fade after the gate ends."
+      },
+      "inputs": {
+        "#0": "Note on/off.",
+        "#1": "Restart the attack while held."
+      },
+      "outputs": {
+        "#0": "0 to 10 V envelope."
+      }
+    },
+    "MockbaModular/Pannah": {
+      "about": "A panner: one signal placed between left and right by knob or CV.",
+      "names": {
+        "inputs": {
+          "0": "Pan CV",
+          "1": "Signal"
+        },
+        "outputs": {
+          "0": "Left",
+          "1": "Right"
+        }
+      },
+      "params": {
+        "pan": "Position, 0 left to 1 right."
+      },
+      "inputs": {
+        "#0": "CV for the position; an LFO here is auto-pan.",
+        "#1": "The signal."
+      },
+      "outputs": {
+        "#0": "Left share.",
+        "#1": "Right share."
+      }
+    },
+    "MockbaModular/ReVoltah": {
+      "about": "A voltage rescaler: maps an input range onto an output range. For example ±5 V in to 0 to 10 V out, or inverting by swapping the output min and max.",
+      "names": {
+        "inputs": {
+          "0": "Signal"
+        },
+        "outputs": {
+          "0": "Signal"
+        }
+      },
+      "params": {
+        "I minimum": "Lowest input voltage expected.",
+        "I maximum": "Highest input voltage expected.",
+        "O minimum": "What the input minimum becomes.",
+        "O maximum": "What the input maximum becomes."
+      },
+      "inputs": {
+        "#0": "The voltage to rescale."
+      },
+      "outputs": {
+        "#0": "The rescaled voltage."
+      }
+    },
+    "MockbaModular/CZOsc": {
+      "about": "An oscillator modelled on Casio's phase distortion synths: eight waveforms whose Shape knob bends a sine into brighter forms, like a filter sweep without a filter.",
+      "names": {
+        "params": {
+          "0": "Waveform",
+          "1": "LFO mode"
+        },
+        "inputs": {
+          "0": "Pitch (1V/oct) / FM",
+          "1": "Shape CV"
+        },
+        "outputs": {
+          "0": "Wave"
+        }
+      },
+      "params": {
+        "#0": "One of eight phase distortion waveforms.",
+        "#1": "Run at LFO speeds instead of audio.",
+        "Frequency": "Pitch in semitones from C4.",
+        "Fine frequency / LFO Offset": "Fine tune (or offset when in LFO mode).",
+        "Shape": "Amount of distortion: 0 is a sine, up is brighter."
+      },
+      "inputs": {
+        "#0": "The note, 1 V per octave.",
+        "#1": "CV for Shape; an envelope here gives the classic CZ sweep."
+      },
+      "outputs": {
+        "#0": "The waveform."
+      }
+    },
+    "MockbaModular/MaugOsc": {
+      "about": "An oscillator with Moog-style waveforms (triangle, saw, shark tooth, pulses) in 2 HP.",
+      "names": {
+        "params": {
+          "0": "Waveform",
+          "1": "LFO mode"
+        },
+        "inputs": {
+          "0": "Pitch (1V/oct) / FM"
+        },
+        "outputs": {
+          "0": "Wave"
+        }
+      },
+      "params": {
+        "#0": "One of seven waveforms.",
+        "#1": "Run at LFO speeds.",
+        "Frequency": "Pitch in semitones from C4.",
+        "Fine frequency / LFO Offset": "Fine tune, or offset in LFO mode."
+      },
+      "inputs": {
+        "#0": "The note."
+      },
+      "outputs": {
+        "#0": "The waveform."
+      }
+    },
+    "SurgeXTRack/SurgeXTWaveshaper": {
+      "about": "Surge's waveshaper: dozens of distortion curves from soft saturation to folding and digital mangling, with drive, bias and filters either side. Stereo in and out.",
+      "params": {
+        "Drive": "How hard the signal hits the curve.",
+        "Bias": "Shifts the signal before shaping, making the distortion asymmetric.",
+        "Gain": "Output level.",
+        "Low Cut": "Highpass before the shaper.",
+        "High Cut": "Lowpass after the shaper.",
+        "Waveshaper Function": "Which curve.",
+        "Enable Low Cut": "Turn the highpass on.",
+        "Enable High Cut": "Turn the lowpass on."
+      },
+      "inputs": {
+        "Left": "Left audio.",
+        "Right": "Right audio (leave empty for mono).",
+        "Modulation Signal 1": "Modulator 1.",
+        "Modulation Signal 2": "Modulator 2.",
+        "Modulation Signal 3": "Modulator 3.",
+        "Modulation Signal 4": "Modulator 4."
+      },
+      "outputs": {
+        "Left": "Left out.",
+        "Right": "Right out."
+      }
+    },
+    "SurgeXTRack/SurgeXTOSCModern": {
+      "about": "Surge's Modern oscillator: a mixable saw, pulse and triangle with sync, sub oscillator and up to 16 unison voices. One module can sound like a whole analogue polysynth's oscillator section.",
+      "params": {
+        "Pitch (v/oct)": "Pitch offset added to the V/Oct input.",
+        "Sawtooth": "Level of the saw.",
+        "Pulse": "Level of the pulse.",
+        "Triangle": "Level of the triangle.",
+        "Width": "Pulse width.",
+        "Sync": "Hard sync amount against an internal master.",
+        "Unison Detune": "Spread between unison voices.",
+        "Unison Voices": "How many detuned copies.",
+        "Octave Shift": "Transpose in octaves.",
+        "Shape": "Triangle shaping.",
+        "Sub": "Sub oscillator level.",
+        "SubSync": "Sync the sub too.",
+        "Random Phase on Retrigger": "Start each note at a random phase.",
+        "Extend Unison": "Wider detune range.",
+        "Absolute Unison": "Detune in Hz rather than cents.",
+        "Character Filter": "Surge's warm/neutral/bright tilt.",
+        "Oscillator Drift": "Analogue-style slow pitch wander.",
+        "Output Level": "Output gain."
+      },
+      "inputs": {
+        "V/Oct": "The note.",
+        "Reset/Retrigger": "Restart the phase.",
+        "Modulation Signal 1": "Modulator 1.",
+        "Modulation Signal 2": "Modulator 2.",
+        "Modulation Signal 3": "Modulator 3.",
+        "Modulation Signal 4": "Modulator 4.",
+        "Audio": "Unused for this oscillator."
+      },
+      "outputs": {
+        "Left (or Mono merged)": "Left, or everything when Right is unpatched.",
+        "Right": "Right (unison spreads across the pair)."
+      }
+    },
+    "SurgeXTRack/SurgeXTOSCSine": {
+      "about": "Surge's Sine oscillator: a sine with 27 shaping variants, feedback FM on itself and unison. Clean sub tones at one end, harsh FM at the other.",
+      "params": {
+        "Pitch (v/oct)": "Pitch offset.",
+        "Shape": "Which of the sine variants.",
+        "Feedback": "Self FM amount; the main tone control.",
+        "Behavior": "Feedback behaviour model.",
+        "Low Cut": "Highpass.",
+        "High Cut": "Lowpass.",
+        "Unison Detune": "Spread between voices.",
+        "Unison Voices": "Number of voices.",
+        "Octave Shift": "Transpose in octaves.",
+        "Enable Low Cut": "Highpass on.",
+        "Enable High Cut": "Lowpass on.",
+        "Enable Vintage Feedback": "Older feedback algorithm.",
+        "Random Phase on Retrigger": "Random start phase.",
+        "Extend Unison": "Wider detune.",
+        "Absolute Unison": "Detune in Hz.",
+        "Character Filter": "Tilt.",
+        "Oscillator Drift": "Slow pitch wander.",
+        "Output Level": "Output gain."
+      },
+      "inputs": {
+        "V/Oct": "The note.",
+        "Reset/Retrigger": "Restart the phase.",
+        "Modulation Signal 1": "Modulator 1.",
+        "Modulation Signal 2": "Modulator 2.",
+        "Modulation Signal 3": "Modulator 3.",
+        "Modulation Signal 4": "Modulator 4.",
+        "Audio": "Unused for this oscillator."
+      },
+      "outputs": {
+        "Left (or Mono merged)": "Left, or everything when Right is unpatched.",
+        "Right": "Right."
+      }
+    },
+    "SurgeXTRack/SurgeXTFXNimbus": {
+      "about": "Surge's port of the Mutable Instruments Clouds granular processor. It records the incoming sound into a buffer and replays it as grains: tiny slices whose position, size, pitch and density you control. Freeze the buffer and a chord becomes a cloud. Stereo.",
+      "try": "Send the VCA output through Nimbus to Audio, raise Mix to full and Density to the middle, then tap Manual Freeze while the arpeggio plays.",
+      "params": {
+        "Mode": "Granular, pitch shifter/time stretch, looping delay or spectral madness.",
+        "Quality": "Buffer sample rate and stereo/mono; lower quality means a longer buffer.",
+        "Position": "Where in the buffer grains are taken from: now, or seconds ago.",
+        "Size": "Grain length.",
+        "Pitch": "Transposition of the grains, in semitones.",
+        "Density": "How often grains fire; centre is sparse, outwards is dense, one side random the other regular.",
+        "Texture": "Grain envelope shape, from clicky to smooth, into diffusion.",
+        "Spread": "Stereo spread of grains.",
+        "Freeze": "Stop recording; the buffer loops as it is.",
+        "Feedback": "Feed output back into the buffer.",
+        "Reverb": "Built-in reverb amount.",
+        "Mix": "Dry to wet balance.",
+        "Manual Freeze": "Freeze button.",
+        "Randomize Engine": "Randomise the engine's parameters."
+      },
+      "inputs": {
+        "Left": "Left audio in.",
+        "Right": "Right audio in.",
+        "Left Sideband": "Extra left input mixed into the buffer.",
+        "Right Sideband": "Extra right input.",
+        "Clock/Tempo CV": "Clock for tempo-synced grains.",
+        "Modulation Signal 1": "Modulator 1.",
+        "Modulation Signal 2": "Modulator 2.",
+        "Modulation Signal 3": "Modulator 3.",
+        "Modulation Signal 4": "Modulator 4.",
+        "Gate to Freeze": "Freeze while high.",
+        "Trigger": "Fire a single grain."
+      },
+      "outputs": {
+        "Left (or Mono merged)": "Left, or everything when Right is unpatched.",
+        "Right": "Right."
+      }
+    },
+    "SurgeXTRack/SurgeXTLFO": {
+      "about": "Surge's LFO and envelope combined: a waveform (sine, triangle, square, ramps, noise, sample and hold, a 16 step sequencer) multiplied by a DAHDSR envelope, with tempo sync. Three outputs give the product, the wave alone or the envelope alone.",
+      "params": {
+        "Rate": "Speed.",
+        "Phase": "Start phase.",
+        "Deform": "Bends the chosen waveform.",
+        "Amplitude": "Output level.",
+        "Delay": "Envelope: wait before the attack.",
+        "Attack": "Envelope rise.",
+        "Hold": "Envelope hold at peak.",
+        "Decay": "Envelope fall to sustain.",
+        "Sustain": "Envelope hold level.",
+        "Release": "Envelope fade after the gate ends.",
+        "Type": "Waveform.",
+        "Unipolar": "0 to 10 V instead of ±5 V."
+      },
+      "inputs": {
+        "Gate for Full LFO (env + wave)": "Gate that restarts the LFO and runs the envelope.",
+        "Gate for Envelope Only": "Gate for the envelope while the wave free-runs.",
+        "Clock": "Tempo clock for sync.",
+        "Direct Phase (0-10v for 0-1 Phase)": "Drive the phase directly with a CV.",
+        "Mod 1": "Modulator 1.",
+        "Mod 2": "Modulator 2.",
+        "Mod 3": "Modulator 3.",
+        "Mod 4": "Modulator 4."
+      },
+      "outputs": {
+        "LFO Wave x Envelope Generator": "Wave times envelope.",
+        "LFO Wave": "Wave alone.",
+        "Envelope Generator": "Envelope alone.",
+        "Trigger on End of Wave Cycle": "Pulse each cycle.",
+        "Trigger on end of Envelope Stage or Step Trigger A": "Pulse at envelope stage ends, or step trigger A.",
+        "Trigger on end of Envelope or Step Trigger B": "Pulse at envelope end, or step trigger B."
+      }
+    },
+    "SurgeXTRack/SurgeXTMixer": {
+      "about": "Surge's oscillator mixer: three stereo inputs plus a noise source and two ring modulators (1×2, 2×3), each with level, mute and solo.",
+      "params": {
+        "Input 1 Level": "Level of input 1.",
+        "Input 2 Level": "Level of input 2.",
+        "Input 3 Level": "Level of input 3.",
+        "Noise Level": "Level of the built-in noise.",
+        "RingMod 1X2 Level": "Level of input 1 multiplied by input 2: metallic sum and difference tones.",
+        "RingMod 2x3 Level": "Level of input 2 × input 3.",
+        "Noise Color": "Tilt of the noise from dark to bright.",
+        "Gain": "Output gain."
+      },
+      "inputs": {
+        "Input 1 Left": "Input 1 left.",
+        "Input 1 Right": "Input 1 right.",
+        "Input 2 Left": "Input 2 left.",
+        "Input 2 Right": "Input 2 right.",
+        "Input 3 Left": "Input 3 left.",
+        "Input 3 Right": "Input 3 right.",
+        "Modulator 1": "Modulator 1.",
+        "Modulator 2": "Modulator 2.",
+        "Modulator 3": "Modulator 3.",
+        "Modulator 4": "Modulator 4."
+      },
+      "outputs": {
+        "Left": "Left mix.",
+        "Right": "Right mix."
+      }
+    },
+    "SurgeXTRack/SurgeXTMixerSlider": {
+      "about": "The same Surge mixer with sliders instead of knobs: three stereo inputs, noise, two ring modulators, mute and solo per source.",
+      "params": {
+        "Input 1 Level": "Level of input 1.",
+        "Input 2 Level": "Level of input 2.",
+        "Input 3 Level": "Level of input 3.",
+        "Noise Level": "Noise level.",
+        "RingMod 1X2 Level": "Input 1 × input 2.",
+        "RingMod 2x3 Level": "Input 2 × input 3.",
+        "Noise Color": "Noise tilt.",
+        "Gain": "Output gain."
+      },
+      "outputs": {
+        "Left": "Left mix.",
+        "Right": "Right mix."
+      }
+    },
+    "SurgeXTRack/SurgeXTModMatrix": {
+      "about": "A modulation matrix: four modulator inputs, eight target outputs, and a depth knob for every pairing. Set a base value per target and add any mix of the modulators to it. Saves a rack full of attenuators and offsets.",
+      "inputs": {
+        "Modulator 1": "Modulator 1.",
+        "Modulator 2": "Modulator 2.",
+        "Modulator 3": "Modulator 3.",
+        "Modulator 4": "Modulator 4."
+      }
+    }
+  }
+}
