@@ -64,6 +64,9 @@
   .jack .to { display:none; flex-basis:100%; font-size:11.5px; color:var(--muted); padding-left:30px; margin-top:-3px; line-height:1.25; }
   .jack.out .to { padding-left:0; padding-right:30px; }
   .jack.connected .to { display:block; }
+  .jack .to .lk { display:inline-block; margin:2px 6px 0 0; padding:1px 7px 1px 2px; border:1px solid var(--line); border-radius:999px; background:#232328; color:var(--text); }
+  .jack .to .lk i { display:inline-block; font-style:normal; font-weight:700; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; background:var(--text); color:#111; margin-right:5px; }
+  .jack.out .to { text-align:right; } .jack.out .to .lk { margin:2px 0 0 6px; }
   #sheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
   #sheet[hidden] { display:none; }
   #psheet { position:fixed; left:0; right:0; bottom:0; top:18vh; z-index:40; background:#1a1a1e; border-top:1px solid var(--line); border-radius:16px 16px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(0,0,0,.6); }
@@ -146,11 +149,12 @@
   </div>
   <div id="patchname"><b id="pname">Untitled</b> <span id="psaved"></span> <span id="hist"></span></div>
   <div id="debug" hidden>
-    <div class="note">Spike B+ · glyph cards driven by the real Cardinal engine, C++ canvas hidden · test build 0.11</div>
+    <div class="note">Spike B+ · glyph cards driven by the real Cardinal engine, C++ canvas hidden · test build 0.12</div>
     <div class="row">
       <button class="btn" id="toggle-ui">Show stock UI</button>
       <button class="btn" id="latency">Latency test</button>
       <button class="btn" id="reload">Reload startup patch</button>
+      <button class="btn" id="order"></button>
     </div>
     <div id="stats">loading engine…</div>
   </div>
@@ -235,9 +239,15 @@ function applyNames(m) { var h = helpFor(m), names = h && h.names || {};
   ['params', 'inputs', 'outputs'].forEach(sec => m[sec].forEach(p => { var n = names[sec] && names[sec][p.id]; if (n != null) { p.name = n; p.ours = true; } }));
   m.params = m.params.filter(p => p.name);
   m.inputs.forEach(p => { if (!p.name) p.name = 'In ' + (p.id + 1); }); m.outputs.forEach(p => { if (!p.name) p.name = 'Out ' + (p.id + 1); }); }
+var ORDER = 'flow'; try { ORDER = localStorage.getItem('cw-order') || 'flow'; } catch (e) {}
+function rackKey(m) { return m.pos ? m.pos[1] * 1000 + m.pos[0] : 0; }
+// Signal-flow order: a module sits below everything that feeds it (longest path from a source), unconnected modules last, rack position breaks ties. Cycles are bounded.
+function flowOrder(ms, cs) { var depth = {}, conn = {}; ms.forEach(m => depth[m.id] = 0); cs.forEach(c => { conn[c.outputModuleId] = conn[c.inputModuleId] = 1; });
+  for (var it = 0; it < ms.length; it++) { var changed = false; cs.forEach(c => { if (c.outputModuleId === c.inputModuleId) return; var d = depth[c.outputModuleId] + 1; if (d > depth[c.inputModuleId] && d < ms.length) { depth[c.inputModuleId] = d; changed = true; } }); if (!changed) break; }
+  return ms.slice().sort((a, b) => ((conn[a.id] ? depth[a.id] : 1e6) - (conn[b.id] ? depth[b.id] : 1e6)) || (rackKey(a) - rackKey(b))); }
 function rebuild() {
   mods = JSON.parse(B.modulesJson()); cables = JSON.parse(B.cablesJson()); mods.forEach(applyNames);
-  mods.sort((a, b) => (a.pos ? a.pos[1] * 1000 + a.pos[0] : 0) - (b.pos ? b.pos[1] * 1000 + b.pos[0] : 0));
+  mods = ORDER === 'flow' ? flowOrder(mods, cables) : mods.sort((a, b) => rackKey(a) - rackKey(b));
   var main = document.getElementById('main'); main.innerHTML = '<svg id="wires"></svg>' + mods.map(card).join('');
   // watch list: every input and output voltage, in module order
   watch = []; watchIndex = {};
@@ -253,12 +263,12 @@ function rebuild() {
   if (helpOpen) { if (mods.some(m => m.id === helpOpen.mid)) openHelp(helpOpen.mid); else closeHelp(); }
 }
 function refreshCables() { cables = JSON.parse(B.cablesJson()); markConnected(); drawWires(); if (helpOpen) openHelp(helpOpen.mid); }
-function markConnected() { document.querySelectorAll('.jack').forEach(j => { j.classList.remove('connected'); var t = j.querySelector('.to'); if (t) t.textContent = ''; });
-  var outs = {};
-  cables.forEach(c => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId);
-    if (b) { b.classList.add('connected'); b.querySelector('.to').textContent = '← ' + modName(c.outputModuleId) + ' · ' + (a ? a.dataset.n : '?'); }
-    if (a) { a.classList.add('connected'); var k = a.id; (outs[k] = outs[k] || []).push(modName(c.inputModuleId) + ' · ' + (b ? b.dataset.n : '?')); } });
-  Object.keys(outs).forEach(k => { document.getElementById(k).querySelector('.to').textContent = '→ ' + outs[k].join(', '); }); }
+function markConnected() { document.querySelectorAll('.jack').forEach(j => { j.classList.remove('connected'); var t = j.querySelector('.to'); if (t) t.innerHTML = ''; });
+  cables.forEach((c, k) => { var a = document.getElementById('j-' + c.outputModuleId + '-o' + c.outputId), b = document.getElementById('j-' + c.inputModuleId + '-i' + c.inputId), n = k + 1;
+    if (b) { b.classList.add('connected'); b.querySelector('.to').innerHTML += '<span class="lk" data-cable="' + c.id + '" data-end="o"><i>' + n + '</i>← ' + esc(modName(c.outputModuleId)) + ' · ' + esc(a ? a.dataset.n : '?') + '</span>'; }
+    if (a) { a.classList.add('connected'); a.querySelector('.to').innerHTML += '<span class="lk" data-cable="' + c.id + '" data-end="i"><i>' + n + '</i>→ ' + esc(modName(c.inputModuleId)) + ' · ' + esc(b ? b.dataset.n : '?') + '</span>'; } }); }
+function jumpTo(c, end) { var j = end === 'o' ? jackEl(c.outputModuleId, 'o', c.outputId) : jackEl(c.inputModuleId, 'i', c.inputId), from = end === 'o' ? jackEl(c.inputModuleId, 'i', c.inputId) : jackEl(c.outputModuleId, 'o', c.outputId); if (!j) return;
+  j.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); [j, from].forEach(el => { if (!el) return; el.classList.add('hover'); setTimeout(() => el.classList.remove('hover'), 1400); }); }
 // ---------- patching. Model: you hold a PLUG, not a jack.
 //  press an OUT jack            -> new cable from it (outputs can feed many inputs, as in Rack)
 //  press a free IN jack         -> new cable into it
@@ -322,6 +332,8 @@ document.addEventListener('pointerdown', e => {
   if (!B) return; if (e.target.closest('#chip')) return;
   var wire = e.target.closest ? e.target.closest('.wire-hit') : null;
   if (wire) { var c = cables.find(x => x.id === +wire.dataset.cable); if (c) pickCable(c); return; }
+  var lk = e.target.closest ? e.target.closest('.lk[data-cable]') : null;
+  if (lk) { e.preventDefault(); var lc = cables.find(x => x.id === +lk.dataset.cable); if (lc) jumpTo(lc, lk.dataset.end); return; }
   var j = jackOf(e.target);
   if (!j) { if (arm && !e.target.closest('.track, .run, .btn, summary')) clearArm(); return; }
   e.preventDefault();
@@ -450,10 +462,12 @@ function drawWires() { var svg = document.getElementById('wires'); if (!svg) ret
     var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); var d;
     if (landscape) { var x1 = ra.left + ra.width/2 - mr.left + main.scrollLeft, y1 = ra.top + ra.height/2 - mr.top, x2 = rb.left + rb.width/2 - mr.left + main.scrollLeft, y2 = rb.top + rb.height/2 - mr.top, dx = Math.max(60, (x2 - x1) * 0.4), sag = 40 + k * 6;
       d = 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + (y1 + sag) + ', ' + (x2 - dx) + ' ' + (y2 + sag) + ', ' + x2 + ' ' + y2;
-      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + sw + '" fill="none" opacity="' + op + '"/>'; }
+      var numL = k + 1, badgeL = (cx, cy) => '<circle cx="' + cx + '" cy="' + cy + '" r="7.5" fill="' + col + '" opacity="' + op + '"/><text x="' + cx + '" y="' + (cy + 3.2) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#111" opacity="' + op + '">' + numL + '</text>';
+      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + sw + '" fill="none" opacity="' + op + '"/>' + badgeL(x1 + 12, y1 + 10) + badgeL(x2 - 12, y2 + 10); }
     else { var y1 = ra.top + ra.height/2 - mr.top, y2 = rb.top + rb.height/2 - mr.top, x = 10 + (lane[c.id] || 0) * laneStep;
       d = 'M40 ' + y1 + ' H' + x + ' V' + y2 + ' H40';
-      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (held && arm.picking ? 4 : 2.5) + '" fill="none" opacity="' + op + '"/><circle cx="' + x + '" cy="' + y1 + '" r="4" fill="' + col + '"/><circle cx="' + x + '" cy="' + y2 + '" r="4" fill="' + col + '"/>'; }
+      var num = k + 1, badge = (cx, cy) => '<circle cx="' + cx + '" cy="' + cy + '" r="7.5" fill="' + col + '" opacity="' + op + '"/><text x="' + cx + '" y="' + (cy + 3.2) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#111" opacity="' + op + '">' + num + '</text>';
+      html += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (held && arm.picking ? 4 : 2.5) + '" fill="none" opacity="' + op + '"/>' + badge(x, y1) + badge(x, y2); }
     html += '<path class="wire-hit" data-cable="' + c.id + '" d="' + d + '" stroke="transparent" stroke-width="22" fill="none" style="pointer-events:stroke"/>'; });
   svg.innerHTML = html; }
 var wiresRaf = 0; function queueWires() { if (!wiresRaf) wiresRaf = requestAnimationFrame(() => { wiresRaf = 0; drawWires(); }); }
@@ -563,6 +577,8 @@ async function offerRestore() { try { var a = await DB.get('autosave'); if (!a |
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && B) { clearTimeout(autosaveTimer); autosave(); } });
 // ---------- buttons
 document.getElementById('start').onclick = function () { var ctx = Module.WebAudioBridge && Module.WebAudioBridge.audioContext; var done = () => { this.textContent = 'Audio on'; this.classList.remove('primary'); }; if (ctx && ctx.state !== 'running') ctx.resume().then(done, done); else done(); };
+function orderLabel() { document.getElementById('order').textContent = 'Cards: ' + (ORDER === 'flow' ? 'signal flow' : 'rack position'); }
+orderLabel(); document.getElementById('order').onclick = () => { ORDER = ORDER === 'flow' ? 'rack' : 'flow'; try { localStorage.setItem('cw-order', ORDER); } catch (e) {} orderLabel(); if (B) rebuild(); };
 document.getElementById('more').onclick = function () { var d = document.getElementById('debug'); d.hidden = !d.hidden; this.setAttribute('aria-expanded', String(!d.hidden)); };
 document.getElementById('toggle-ui').onclick = function () { if (!B) return; uiHidden = !uiHidden; B.setHidden(uiHidden ? 1 : 0); canvasWrapper.classList.toggle('shown', !uiHidden); this.textContent = uiHidden ? 'Show stock UI' : 'Hide stock UI'; window.dispatchEvent(new Event('resize')); };
 document.getElementById('latency').onclick = function () { if (!B || latencyTest) return; var vca = mods.find(m => m.model === 'VCA-1'); if (!vca) return; latencyTest = { t0: performance.now(), hits: 0, done: false, restore: B.getParam(vca.id, 0) }; B.setParam(vca.id, 0, 0); setTimeout(() => { if (latencyTest && latencyTest.done) window.lastLatency = latencyTest.ms; }, 900); };
