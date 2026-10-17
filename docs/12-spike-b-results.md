@@ -400,3 +400,39 @@ new VCF then both moved to Triangle in one gesture; SEQ 3 reads
 
 Still open from Andrew's note: he knows the header was debug chrome; the
 rest of the shell (install, service worker) is unchanged.
+
+## 13. Wires, second round (test build 0.12, 2026-10-17)
+
+Andrew on 0.11: dropping a cable on another OUT works; wires are "still
+meh to track". Diagnosis: a thin line in one gutter still asks the eye to
+follow it across a scroll, and the labels (§12) help only once you are
+at a jack. Three changes replace following with reading:
+
+1. **Cards ordered by signal flow.** Each module sits below everything
+   that feeds it (longest path from a source), unconnected modules last,
+   rack position breaks ties, cycles bounded. Most wires then hop to the
+   next card down. The startup patch was already in that order; inserting
+   a VCF between VCO and VCA now places it between them (verified). The
+   `⋯` row has a toggle back to rack position, remembered per browser.
+   Cards reorder only on load and module add/remove, not on cable changes,
+   so the layout does not shift under a drag.
+2. **Numbered wire ends.** Every cable has a number, shown in a badge at
+   both ends of the margin wire and in the chip on each of its two jacks.
+   Matching ends is reading the same digit, which needs no colour and no
+   tracing. Numbers follow the engine's cable order; removing a cable
+   renumbers the later ones.
+3. **Tap a label to jump.** Each connection chip ("1 → VCO · 1V/octave
+   pitch") is a button: tapping it scrolls the other end into view and
+   flashes both jacks for 1.4 s. It does not arm patching.
+
+Verified headlessly (`docs/spikes/2026-10-17-wires2-log.txt`,
+`2026-10-17-wires2-numbered.png`): six badges each appearing twice, label
+numbers consistent per cable, jump scrolled 924 px and flashed SEQ 3 CV 1
+and VCO pitch without arming or showing the chip, order toggle round-trips
+and persists, VCF inserted between VCO and VCA. Audio ran throughout.
+
+Honest limits: wire 2 (SEQ 3 Trigger to ADSR Gate) still spans 1800 px
+because VCO sits between them and cards are tall; the SEQ 3 card alone is
+about 900 px with its step grid and 21 jacks. If tracking is still poor,
+the next lever is card height (collapse unconnected jacks behind "more"),
+not the wires.

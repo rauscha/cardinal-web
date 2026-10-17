@@ -1,0 +1,10 @@
+flow order: SEQ 3 › VCO › ADSR › VCA › Audio 2 › Text Editor
+wire lengths (px): 912, 1843, 1271, 532, 429, 502 · total 5489
+badges: 1×2 2×2 3×2 4×2 5×2 6×2
+labels: Trigger [2] → ADSR · Gate | CV 1 [1] → VCO · 1V/octave pitch | 1V/octave pitch [1] ← SEQ 3 · CV 1 | Sawtooth [3] → VCA · Channel | Gate [2] ← SEQ 3 · Trigger | Envelope [4] → VCA · CV | CV [4] ← ADSR · Envelope | Channel [3] ← VCO · Sawtooth | Channel [5] → Audio 2 · Left | Channel [6] → Audio 2 · Right | Left [5] ← VCA · Channel | Right [6] ← VCA · Channel
+label numbers consistent per cable: true
+tap pitch label: scrolled -924 px · flashed: SEQ 3 · CV 1, VCO · 1V/octave pitch · arm null true · chip shown false
+rack order: SEQ 3 › VCO › ADSR › VCA › Audio 2 › Text Editor · button: Cards: rack position · stored rack
+back to flow: SEQ 3 › VCO › ADSR › VCA › Audio 2 › Text Editor
+with VCF inserted: SEQ 3 › VCO › ADSR › VCF › VCA › Audio 2 › Text Editor
+audio: running
